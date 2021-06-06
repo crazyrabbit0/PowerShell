@@ -45,57 +45,21 @@ function showTitle {
 	""
 }
 
-function wait {
-	param (
-        [ValidateNotNullOrEmpty()]
-        [int]$seconds = 3,
-		
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Waiting"
-    )
-	Write-Host -NoNewLine "$text"
-	for($i=0; $i -le $seconds; $i++) {
-		Start-Sleep 1
-		Write-Host -NoNewLine "."
-	}
-}
-
-function quit {
-	param (
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Exiting",
-		
-        [string]$runPath,
-		
-        [string]$runArgument
-    )
-	""
-	wait -text $text
-	if($runPath -ne $null) {
-		Start-Process $runPath $runArgument
-	}
-	""
-	exit
-}
-
 function quitPrompt {
 	param (
         [ValidateNotNullOrEmpty()]
         [string]$title = "Finish",
 		
         [ValidateNotNullOrEmpty()]
-        [string]$text = "Press any key to exit ",
+        [string]$text = "Press any key to exit",
 		
         [bool]$isQuiting = $true
     )
 	showTitle $title
 	""
 	"${textPrefix}${text}"
-	""
-	Write-Host -NoNewLine "${textPrefix}"
+	[Console]::CursorVisible = $false
 	[console]::ReadKey().Key > $null
-	Write-Host -NoNewLine "`r          `r"
-	if($isQuiting) { quit }
 }
 
 
