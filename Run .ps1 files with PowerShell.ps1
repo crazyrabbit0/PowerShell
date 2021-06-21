@@ -3,7 +3,7 @@
 
 $debug = 0
 $textPrefix = " "
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$scriptTitle = "Run .ps1 files with PowerShell"
 
 #--------------- Main Code ---------------
 

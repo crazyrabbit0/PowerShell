@@ -2,7 +2,7 @@
 #--------------- Variables ---------------
 
 $textPrefix = " "
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$scriptTitle = "Synchronizer"
 
 if(-not (Test-Path env:cr)) { $env:cr = "C:\CR" }
 $setupsPath = "$env:cr\Programs\Setups"

@@ -2,12 +2,12 @@
 #--------------- Variables ---------------
 
 $debug = 0
-$tmpFolder = "${PSScriptRoot}\tmp\"
+$tmpFolder = ".\tmp\"
 
 #--------------- Main Code ---------------
 
 function main {
-	if($args.count -eq 0) { $args = @($tmpFolder) }
+	if([string]::IsNullOrWhiteSpace($args[0])) { $args[0] = $tmpFolder }
 	if($debug) { $args;"" }
 	Foreach($arg in $args) {
 		if(Test-Path $arg -PathType Container) {

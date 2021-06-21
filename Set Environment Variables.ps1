@@ -2,7 +2,7 @@
 #--------------- Variables ---------------
 
 $textPrefix = " "
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$scriptTitle = "Set Environment Variables"
 
 $envVars = @(
 	@{name = "CR";			shortcut = "cr";	path = "C:\CR"},

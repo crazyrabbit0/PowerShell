@@ -2,7 +2,7 @@
 #--------------- Variables ---------------
 
 $debug = 0
-$permissionsSource = get-acl "$env:appData"
+$permissionsSource = "$env:appData"
 
 #--------------- Main Code ---------------
 
@@ -11,15 +11,15 @@ function main {
 	if($debug) { $args;"" }
 	Foreach($arg in $args) {
 		if(Test-Path $arg -PathType Leaf) {
-			if($debug) { get-acl $arg | format-list }
-			Set-Acl $arg $permissionsSource
-			if($debug) { get-acl $arg | format-list }
+			if($debug) { Get-Acl $arg | format-list }
+			Get-Acl $permissionsSource | Set-Acl $arg
+			if($debug) { Get-Acl $arg | format-list }
 		}
 		elseif(Test-Path $arg -PathType Container) {
 			Get-ChildItem $arg -Recurse -Force | Foreach {
-				if($debug) { get-acl $_.FullName | format-list }
-				Set-Acl $_.FullName $permissionsSource
-				if($debug) { get-acl $_.FullName | format-list }
+				if($debug) { Get-Acl $_.FullName | format-list }
+				Get-Acl $permissionsSource | Set-Acl $_.FullName
+				if($debug) { Get-Acl $_.FullName | format-list }
 			}
 		}
 	}
