@@ -3,34 +3,69 @@
 
 $debug = 0
 $textPrefix = " "
-$scriptTitle = "Run .ps1 files with PowerShell"
+$scriptTitle = (Get-Item $PSCommandPath).Basename
 
 #--------------- Main Code ---------------
 
 function main {
+	param ([String[]] $argz)
+	
+	runWithAdminRights
 	showTitle $scriptTitle
-	""
+	
+	$powershellPath = '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"'
+	$runCommand = "$powershellPath -File `"%1`""
+	
+	$powershellReg = "Registry::HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1"
+	$sourceToCopyReg = "Registry::HKEY_CLASSES_ROOT\batfile"
+	$powershellOpenWithReg = "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ps1"
 	
 	""
 	"${textPrefix}Set Execution Policy"
 	if(!$debug) { $ErrorActionPreference = 'SilentlyContinue' }
-	Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force > $null
+	Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+	# Default: "Restricted"
 	
 	""
-	"${textPrefix}Fix Run Command in Registry"
-	Set-Item 'Registry::HKEY_CLASSES_ROOT\Applications\powershell.exe\shell\open\command' -Value '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -File "%1"' -Force > $null
+	"${textPrefix}Fix Run Command"
+	Set-Item "$powershellReg\Shell\Open\Command" -Value $runCommand
+	# Default: "C:\Windows\System32\notepad.exe" "%1"
 	
 	""
-	"${textPrefix}Add Open With to Registry"
-	New-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ps1\OpenWithList' -Name a -Value powershell.exe -Force > $null
+	"${textPrefix}Fix Icon"
+	Set-Item "$powershellReg\DefaultIcon" -Value $powershellPath
+	# Default: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell_ise.exe",1
+	
 	""
-	New-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ps1\OpenWithList' -Name MRUList -Value a -Force > $null
+	"${textPrefix}Add Drag & Drop"
+	Remove-Item "$powershellReg\shellex" -Recurse
+	New-Item "$powershellReg\shellex" > $null
+	Copy-Item "$sourceToCopyReg\shellex\DropHandler" "$powershellReg\shellex" -Recurse
+	
+	""
+	"${textPrefix}Add Run as Administrator"
+	Remove-Item "$powershellReg\Shell\runas" -Recurse
+	Copy-Item "$sourceToCopyReg\shell\runas" "$powershellReg\Shell" -Recurse
+	Set-Item "$powershellReg\Shell\runas\Command" -Value $runCommand
+	
+	""
+	"${textPrefix}Remove Open With Choice"
+	$RegKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($powershellOpenWithReg, $true)
+	$RegKey.DeleteSubKey('UserChoice', $true)
+	$RegKey.Close()
 	
 	showTitle "Finish"
 	quit
 }
 
 #--------------- Functions ---------------
+
+function runWithAdminRights {
+	if(!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+		exit
+	}
+}
 
 function showTitle {
 	param (
@@ -39,7 +74,7 @@ function showTitle {
     )
 	""
 	"================ $Title ================"
-	#""
+	""
 }
 
 function wait {

@@ -7,9 +7,11 @@ $permissionsSource = "$env:appData"
 #--------------- Main Code ---------------
 
 function main {
+	param ([String[]] $argz)
+	
 	runWithAdminRights
-	if($debug) { $args;"" }
-	Foreach($arg in $args) {
+	if($debug) { $argz;"" }
+	Foreach($arg in $argz) {
 		if(Test-Path $arg -PathType Leaf) {
 			if($debug) { Get-Acl $arg | format-list }
 			Get-Acl $permissionsSource | Set-Acl $arg

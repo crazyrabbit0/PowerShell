@@ -2,7 +2,7 @@
 #--------------- Variables ---------------
 
 $textPrefix = " "
-$scriptTitle = "Set Environment Variables"
+$scriptTitle = (Get-Item $PSCommandPath).Basename
 
 $envVars = @(
 	@{name = "CR";			shortcut = "cr";	path = "C:\CR"},
@@ -14,6 +14,8 @@ $envVars = @(
 #--------------- Main Code ---------------
 
 function main {
+	param ([String[]] $argz)
+	
 	showTitle($scriptTitle)
 	""
 	Foreach($envVar in $envVars) {

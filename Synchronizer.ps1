@@ -2,7 +2,7 @@
 #--------------- Variables ---------------
 
 $textPrefix = " "
-$scriptTitle = "Synchronizer"
+$scriptTitle = (Get-Item $PSCommandPath).Basename
 
 if(-not (Test-Path env:cr)) { $env:cr = "C:\CR" }
 $setupsPath = "$env:cr\Programs\Setups"
@@ -15,6 +15,8 @@ $exitRunArgument = "Venom"
 #--------------- Main Code ---------------
 
 function main {
+	param ([String[]] $argz)
+	
 	showTitle($scriptTitle)
 	"${textPrefix}Are you sure you want to continue?"
 	""
