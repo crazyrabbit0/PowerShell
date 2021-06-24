@@ -14,21 +14,20 @@ function main {
 	showTitle $scriptTitle
 	
 	$powershellPath = '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"'
-	$runCommand = "$powershellPath -File `"%1`" %*"
+	$powershellRun = "$powershellPath -File `"%1`" %*"
 	
 	$powershellReg = "Registry::HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1"
-	$sourceToCopyReg = "Registry::HKEY_CLASSES_ROOT\batfile"
 	$powershellOpenWithReg = "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ps1"
 	
 	""
 	"${textPrefix}Set Execution Policy"
 	if(!$debug) { $ErrorActionPreference = 'SilentlyContinue' }
-	Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+	Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force > $null
 	# Default: "Restricted"
 	
 	""
 	"${textPrefix}Fix Run Command"
-	Set-Item "$powershellReg\Shell\Open\Command" -Value $runCommand
+	Set-Item "$powershellReg\Shell\Open\Command" -Value $powershellRun
 	# Default: "C:\Windows\System32\notepad.exe" "%1"
 	
 	""
@@ -38,16 +37,17 @@ function main {
 	
 	""
 	"${textPrefix}Add Drag & Drop"
-	Remove-Item "$powershellReg\shellex" -Recurse
-	New-Item "$powershellReg\shellex\DropHandler" -Force > $null
-	Set-Item "$powershellReg\shellex\DropHandler" -Value "{60254CA5-953B-11CF-8C96-00AA00B8708C}"
+	Remove-Item "$powershellReg\ShellEx" -Recurse > $null
+	New-Item "$powershellReg\ShellEx\DropHandler" -Force > $null
+	Set-Item "$powershellReg\ShellEx\DropHandler" -Value "{60254CA5-953B-11CF-8C96-00AA00B8708C}"
 	# Default: {86C86720-42A0-1069-A2E8-08002B30309D}
 	
 	""
 	"${textPrefix}Add Run as Administrator"
-	Remove-Item "$powershellReg\Shell\runas" -Recurse
-	Copy-Item "$sourceToCopyReg\shell\runas" "$powershellReg\Shell" -Recurse
-	Set-Item "$powershellReg\Shell\runas\Command" -Value $runCommand
+	Remove-Item "$powershellReg\Shell\RunAs" -Recurse > $null
+	New-Item "$powershellReg\Shell\RunAs\Command" -Force > $null
+	New-ItemProperty "$powershellReg\Shell\RunAs" "HasLUAShield" > $null
+	Copy-Item "$powershellReg\Shell\Open\Command" "$powershellReg\Shell\RunAs"
 	
 	""
 	"${textPrefix}Remove Open With"
