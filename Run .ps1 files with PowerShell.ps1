@@ -14,7 +14,7 @@ function main {
 	showTitle $scriptTitle
 	
 	$powershellPath = '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"'
-	$runCommand = "$powershellPath -File `"%1`""
+	$runCommand = "$powershellPath -File `"%1`" %*"
 	
 	$powershellReg = "Registry::HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1"
 	$sourceToCopyReg = "Registry::HKEY_CLASSES_ROOT\batfile"
@@ -39,8 +39,9 @@ function main {
 	""
 	"${textPrefix}Add Drag & Drop"
 	Remove-Item "$powershellReg\shellex" -Recurse
-	New-Item "$powershellReg\shellex" > $null
-	Copy-Item "$sourceToCopyReg\shellex\DropHandler" "$powershellReg\shellex" -Recurse
+	New-Item "$powershellReg\shellex\DropHandler" -Force > $null
+	Set-Item "$powershellReg\shellex\DropHandler" -Value "{60254CA5-953B-11CF-8C96-00AA00B8708C}"
+	# Default: {86C86720-42A0-1069-A2E8-08002B30309D}
 	
 	""
 	"${textPrefix}Add Run as Administrator"
@@ -49,7 +50,7 @@ function main {
 	Set-Item "$powershellReg\Shell\runas\Command" -Value $runCommand
 	
 	""
-	"${textPrefix}Remove Open With Choice"
+	"${textPrefix}Remove Open With"
 	$RegKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($powershellOpenWithReg, $true)
 	$RegKey.DeleteSubKey('UserChoice', $true)
 	$RegKey.Close()
