@@ -10,7 +10,7 @@ $scriptTitle = (Get-Item $PSCommandPath).Basename
 function main {
 	param ([String[]] $argz)
 	
-	runWithAdminRights
+	runWithAdminRights $argz
 	showTitle $scriptTitle
 	
 	$powershellPath = '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"'
@@ -62,8 +62,10 @@ function main {
 #--------------- Functions ---------------
 
 function runWithAdminRights {
+    param ([String[]] $argz)
+
 	if(!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
 		exit
 	}
 }

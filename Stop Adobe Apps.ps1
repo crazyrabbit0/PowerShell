@@ -9,7 +9,6 @@ $scriptTitle = (Get-Item $PSCommandPath).Basename
 function main {
 	param ([String[]] $argz)
 	
-	#runWithAdminRights
 	showTitle $scriptTitle
 	Get-Process "Acro*" | Stop-Process -Force -PassThru
 	Get-Process "Adobe*" | Stop-Process -Force -PassThru
@@ -19,13 +18,6 @@ function main {
 }
 
 #--------------- Functions ---------------
-
-function runWithAdminRights {
-	if(!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-		exit
-	}
-}
 
 function showTitle {
 	param (

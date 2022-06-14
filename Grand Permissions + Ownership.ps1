@@ -9,7 +9,7 @@ $permissionsSource = "$env:appData"
 function main {
 	param ([String[]] $argz)
 	
-	runWithAdminRights
+	runWithAdminRights $argz
 	if($debug) { $argz;"" }
 	Foreach($arg in $argz) {
 		if(Test-Path $arg -PathType Leaf) {
@@ -31,8 +31,10 @@ function main {
 #--------------- Functions ---------------
 
 function runWithAdminRights {
+    param ([String[]] $argz)
+
 	if(!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
 		exit
 	}
 }
