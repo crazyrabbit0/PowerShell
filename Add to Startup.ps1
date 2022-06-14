@@ -14,8 +14,8 @@ function main {
 	showTitle $scriptTitle
     if($debug) { $argz }
 
-    $EntryName = Split-Path (Split-Path $argz[0]) -Leaf
-    $EntrypPath = $argz[0] + ($argz | Select -Skip 1 | ForEach-Object{ " $_" })
+    $EntryName = (Get-Item $argz[0]).BaseName
+    $EntrypPath = """$($argz[0])""" + ($argz | Select -Skip 1 | ForEach-Object{ " ""$_""" })
     
 	showTitle "Creating the Startup Folder"
 	If (-NOT (Test-Path $RegistryPath)) {
