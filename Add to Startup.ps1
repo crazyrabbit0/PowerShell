@@ -15,7 +15,7 @@ function main {
     if($debug) { $argz }
 
     $EntryName = (Get-Item $argz[0]).BaseName
-    $EntrypPath = """$($argz[0])""" + ($argz | Select -Skip 1 | ForEach-Object{ " ""$_""" })
+    $EntryValue = """$($argz[0])""" + ($argz | Select -Skip 1 | ForEach-Object{ " ""$_""" })
     
 	showTitle "Creating the Startup Folder"
 	If (-NOT (Test-Path $RegistryPath)) {
@@ -23,7 +23,7 @@ function main {
 	}
     
 	showTitle "Setting the Startup Key"
-	New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntrypPath -PropertyType String -Force
+	New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType String -Force
 	
 	if($debug) { "";pause }
 	showTitle "Finish"
