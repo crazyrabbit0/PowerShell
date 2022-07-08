@@ -14,6 +14,19 @@ function main {
 	
 	Get-Process "Acrobat*" | Stop-Process -Force -PassThru
 	Get-Process | Where-Object Company -Match ".*Adobe.*" | Stop-Process -Force -PassThru
+    
+	""
+	"${textPrefix}Do you want to Clean the Adobe Folders?"
+	""
+	"${textPrefix} [Y] Yes    [N] No"
+	""
+	do {
+		$userChoice = [console]::ReadKey().Key
+		Write-Host -NoNewLine "`r `r"
+	} until($userChoice -match '^[yn]$')
+	if($userChoice -eq 'y') {
+		Remove-Item -Path @("${env:CommonProgramFiles(x86)}\Adobe\SLCache\*", "$env:ProgramData\Adobe\SLStore\*") -Force
+	}
 	
 	""
 	showTitle "Finish"
