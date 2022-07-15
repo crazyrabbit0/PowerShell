@@ -14,14 +14,14 @@ function main {
 	showTitle $scriptTitle
 	""
 	"${textPrefix}Uninstalling Product Keys"
-	Cscript "$env:winDir\System32\Slmgr.vbs" /upk
+	Cscript "$env:WinDir\System32\Slmgr.vbs" /upk
 	""
 	"${textPrefix}Removing Product Keys from Registry"
-	Cscript "$env:winDir\System32\Slmgr.vbs" /cpky
+	Cscript "$env:WinDir\System32\Slmgr.vbs" /cpky
 	""
 	""
 	"${textPrefix}Removing KMS hosts from Registry"
-	Cscript "$env:winDir\System32\Slmgr.vbs" /ckms
+	Cscript "$env:WinDir\System32\Slmgr.vbs" /ckms
 	""
 	restartPrompt
 }
