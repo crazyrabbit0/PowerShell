@@ -17,13 +17,14 @@ function main {
     $EntryName = (Get-Item $argz[0]).BaseName
     $EntryValue = """$($argz[0])""" + ($argz | Select -Skip 1 | ForEach-Object{ " ""$_""" })
     
-	showTitle "Creating the Startup Folder"
-	If (-NOT (Test-Path $RegistryPath)) {
-	  New-Item -Path $RegistryPath -Force | Out-Null
+	If ((Get-Item $RegistryPath -ErrorAction Ignore).Property -contains $EntryName) {
+		showTitle "Deleting Key: ""$EntryName"""
+		Remove-ItemProperty -Path $RegistryPath -Name $EntryName -Force
 	}
-    
-	showTitle "Setting the Startup Key"
-	New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType String -Force
+	else {
+		showTitle "Creating Key: ""$EntryName"""
+		New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType String -Force
+	}
 	
 	if($debug) { "";pause }
 	showTitle "Finish"
