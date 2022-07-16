@@ -9,6 +9,7 @@ function main {
 	param ([String[]] $argz)
 	
 	if($debug) { $argz;"" }
+	
 	Foreach($arg in $argz) {
 		if(Test-Path $arg) {
 			$file = Get-Item $arg -Force
@@ -32,6 +33,7 @@ function main {
 			if($debug) { $file.Attributes }
 		}
 	}
+	
 	if($debug) { "";pause }
 }
 
