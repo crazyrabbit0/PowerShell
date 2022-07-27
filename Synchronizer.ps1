@@ -34,38 +34,38 @@ function main {
 	syncFile `
 		"MEGAsync (64-bit)" `
 		"$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg" `
-		"$setupsPath\MEGAsync (64-bit)\.MEGAsync Settings -CR\MEGAsync.cfg"
+		"$setupsPath\MEGAsync (64-bit)\.MEGAsync Settings  -CR\MEGAsync.cfg"
 	
 	syncFile `
 		"AnyDesk" `
 		"$env:AppData\AnyDesk\user.conf" `
-		"$portablesPath\AnyDesk\.AnyDesk Settings -CR\user.conf"
+		"$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
 	
 	syncFolder `
 		"Viber" `
 		"$env:AppData\ViberPC" `
-		"$setupsPath\Viber\.Viber Settings -CR\ViberPC"
+		"$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
 	
 	syncFolder `
 		"Chrome (64-bit)" `
 		"$env:LocalAppData\Google\Chrome\User Data" `
-		"$setupsPath\Chrome (64-bit)\.Chrome Settings -CR\User Data" `
+		"$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data" `
 		"BrowserMetrics", "Cache", "Code Cache", "GPUCache"
 	
 	exportRegistry `
 		"7-Zip (64-bit)" `
 		"HKCU\SOFTWARE\7-Zip" `
-		"$setupsPath\7-Zip (64-bit)\.7-Zip Settings -CR.reg"
+		"$setupsPath\7-Zip (64-bit)\.7-Zip Settings  -CR.reg"
 	
 	exportRegistry `
 		"Internet Download Manager" `
 		"HKCU\SOFTWARE\DownloadManager" `
-		"$setupsPath\Internet Download Manager\.Internet Download Manager Settings -CR.reg"
+		"$setupsPath\Internet Download Manager\.Internet Download Manager Settings  -CR.reg"
 	
 	exportRegistry `
 		"Cheat Engine" `
 		"HKCU\SOFTWARE\Cheat Engine" `
-		"$portablesPath\Cheat Engine\.Cheat Engine Settings -CR.reg"
+		"$portablesPath\Cheat Engine\.Cheat Engine Settings  -CR.reg"
 	
 	""
 	showTitle "Finish"
