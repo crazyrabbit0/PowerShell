@@ -10,7 +10,8 @@ $program_path = "$env:cr\Programs\Portables\Audio Repeater MME + KS\audiorepeate
 function main {
 	param ([String[]] $argz)
 	
-	runWithAdminRights $argz
+	runHiddenWithAdminRights $argz
+    oneInstanceMode
     $program_file = Split-Path $program_path -Leaf
     $program_directory = Split-Path $program_path -Resolve
 	while($true)
@@ -30,10 +31,11 @@ function main {
             #
 			#$device_connected = ($bluetooth_devices | Where-Object {$_.FriendlyName -eq $device_name}  | Get-PnpDeviceProperty -KeyName "DEVPKEY_Device_DevNodeStatus").Data -eq 25190410
 			$device_connected = ($bluetooth_devices | Where-Object {$_.FriendlyName -eq $device_name}  | Get-PnpDeviceProperty -KeyName "DEVPKEY_Bluetooth_LastConnectedTime").Type -eq "Empty"
-            $program_running = [boolean]((Get-CimInstance Win32_Process -Filter "name = ""$program_file""" | Select CommandLine) -Like "*$device_name*")
+            $program_running = Get-CimInstance Win32_Process -Filter "name = ""$program_file""" | Where CommandLine -Like "*$device_name*"
 			if(-not $device_connected -or $program_running) { continue }
 			if($debug) { $program_running;"" }
-			Start-Process -FilePath "taskkill" -ArgumentList "/im $program_file" -WindowStyle Hidden
+			Start-Process -FilePath "taskkill" -ArgumentList "/pid $($program_running.ProcessId)" -WindowStyle Hidden
+			Start-Sleep -Seconds 1.5 # Delay for device to be ready after connection
 			Start-Process -FilePath "$env:comspec" -ArgumentList "/c start /min """" ""$program_file"" /Input:""VB-Audio Point"" /Output:""$device_name Stereo"" /OutputPrefill:70 /SamplingRate:44100 /AutoStart" -WorkingDirectory $program_directory -WindowStyle Hidden
 		}
         Start-Sleep -Seconds 1
@@ -43,15 +45,23 @@ function main {
 
 #--------------- Functions ---------------
 
-function runWithAdminRights {
+function runHiddenWithAdminRights
+{
     param ([String[]] $argz)
-
-	if(!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
-		exit
-	}
+	
+	$process_is_admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+	$process_is_hidden = Get-CimInstance Win32_Process -Filter "name = ""powershell.exe""" | Where ProcessId -eq $PID | Where CommandLine -Like "*-WindowStyle Hidden*"
+	if($process_is_admin -and $process_is_hidden) { return }
+	Start-Process -Verb RunAs -FilePath "powershell.exe" -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File ""$PSCommandPath"" $argz"
+	exit
 }
 
-#--------------- Run Main Code ---------------
+function oneInstanceMode
+{
+	$all_instances = Get-CimInstance Win32_Process -Filter "name = ""powershell.exe""" | Where CommandLine -Like "*$PSCommandPath*"
+	$all_instances | Where ProcessId -ne $PID | foreach { Stop-Process -Id $_.ProcessId }
+}
+
+#--------------- Run Code ---------------
 
 main $args
