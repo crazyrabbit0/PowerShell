@@ -64,7 +64,7 @@ function restartEveryHour
 {
 	$current_time = Get-Date
 	$process_start_time = (Get-Process -id $PID).StartTime
-	$process_runs_less_than_an_hour = ($current_time - $process_start_time).TotalHours < 1
+	$process_runs_less_than_an_hour = ($current_time - $process_start_time).TotalHours -lt 1
 	If($process_runs_less_than_an_hour) {return}
 	Start-Process -Verb RunAs -FilePath "$powershell_path" -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File ""$PSCommandPath"" $argz"
 	exit
