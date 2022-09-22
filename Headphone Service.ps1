@@ -10,12 +10,13 @@ function main
 {
 	param ([String[]] $argz)
 	
-	runAsAdminHidden $argz
-	oneInstanceMode
+	#runAsAdmin $argz
+	#runAsAdminHidden $argz
+	#oneInstanceMode
 	while($true)
 	{
 		#restartEveryHour
-		Start-Sleep -Seconds 1
+		#if($debug) {pause;""}
 		$bluetooth_devices = Get-PnpDevice | Where Description -eq "Bluetooth Device"
 		#
 		# DEVPKEY_Device_DevNodeStatus (Data)
@@ -28,19 +29,29 @@ function main
 		#
 		$connected_device = $bluetooth_devices | Get-PnpDeviceProperty | Where-Object {$_.KeyName -eq "DEVPKEY_Device_DevNodeStatus" -and $_.Data -eq "25190410"}
 		if(-not $connected_device) {continue}
-		if($debug) {$connected_device;""}
-		$device_name = (Get-PnpDevice -InstanceId $connected_device.InstanceId).FriendlyName
-		$program_running = Get-CimInstance Win32_Process | Where CommandLine -Like """$program_path""*$device_name*"
-		if($program_running) {continue}
-		if($debug) {$program_running;""}
-		Start-Process -FilePath "taskkill" -ArgumentList "/im $(Split-Path $program_path -Leaf)" -WindowStyle Hidden
 		Start-Sleep -Seconds 1.5 # Delay for device to be ready after connection
-		Start-Process -FilePath "$env:comspec" -ArgumentList "/c start /min """" ""$program_path"" /Input:""VB-Audio Point"" /Output:""$device_name Stereo"" /OutputPrefill:70 /SamplingRate:44100 /AutoStart" -WindowStyle Hidden
-		#if($debug) { "";pause }
+		$device_name = (Get-PnpDevice -InstanceId $connected_device.InstanceId).FriendlyName
+		if($debug) {"Connected Headphones: $device_name";""}
+		$program_running = Get-CimInstance Win32_Process | Where CommandLine -Like "*$program_path*$device_name*"
+		if($program_running) {continue}
+		if($debug) {"Audio Repeater is not Running!  Restarting...";""}
+		Stop-Process -Name (Get-Item $program_path).Basename #Start-Process -Verb RunAs -FilePath "taskkill" -ArgumentList "/im (Get-Item $program_path).Name" -WindowStyle Hidden
+		Start-Process -FilePath "$program_path" -ArgumentList "/Input:""VB-Audio Point"" /Output:""$device_name Stereo"" /OutputPrefill:70 /SamplingRate:44100 /AutoStart" #Start-Process -FilePath "$env:comspec" -ArgumentList "/c start /min """" ""$program_path"" /Input:""VB-Audio Point"" /Output:""$device_name Stereo"" /OutputPrefill:70 /SamplingRate:44100 /AutoStart" -WindowStyle Hidden
+		
 	}
 }
 
 #--------------- Functions ---------------
+
+function runAsAdmin
+{
+	param ([String[]] $argz)
+	
+	$process_is_admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+	if($process_is_admin) {return}
+	Start-Process -Verb RunAs -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File ""$PSCommandPath"" $argz"
+	exit
+}
 
 function runAsAdminHidden
 {
@@ -65,7 +76,7 @@ function restartEveryHour
 	$process_start_time = (Get-Process -id $PID).StartTime
 	$process_runs_less_than_an_hour = ($current_time - $process_start_time).TotalHours -lt 1
 	If($process_runs_less_than_an_hour) {return}
-	Start-Process -Verb RunAs -FilePath "powershell.exe" -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File ""$PSCommandPath"" $argz"
+	Start-Process -Verb RunAs -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File ""$PSCommandPath"" $argz"
 	exit
 }
 
