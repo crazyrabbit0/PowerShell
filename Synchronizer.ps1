@@ -47,6 +47,11 @@ function main {
 		"$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
 	
 	syncFolder `
+		"Viber" `
+		"$env:AppData\RustDesk\config" `
+		"$portablesPath\RustDesk\.RustDesk Settings  -CR\config"
+	
+	syncFolder `
 		"Chrome (64-bit)" `
 		"$env:LocalAppData\Google\Chrome\User Data" `
 		"$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data" `
