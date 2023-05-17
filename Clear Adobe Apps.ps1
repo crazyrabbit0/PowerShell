@@ -54,6 +54,21 @@ function showTitle {
 	""
 }
 
+function wait {
+	param (
+        [ValidateNotNullOrEmpty()]
+        [int]$seconds = 3,
+		
+        [ValidateNotNullOrEmpty()]
+        [string]$text = "${textPrefix}Waiting"
+    )
+	Write-Host -NoNewLine "$text"
+	for($i=0; $i -le $seconds; $i++) {
+		Start-Sleep 1
+		Write-Host -NoNewLine "."
+	}
+}
+
 function quit {
 	param (
         [ValidateNotNullOrEmpty()]
