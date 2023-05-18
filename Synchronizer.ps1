@@ -47,7 +47,7 @@ function main {
 		"$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
 	
 	syncFolder `
-		"Viber" `
+		"RustDesk" `
 		"$env:AppData\RustDesk\config" `
 		"$portablesPath\RustDesk\.RustDesk Settings  -CR\config"
 	
