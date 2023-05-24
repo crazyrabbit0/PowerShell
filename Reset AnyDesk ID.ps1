@@ -45,8 +45,8 @@ function main {
 	param ([String[]]$argz)
 	
 	runWithAdminRights $argz "Minimized"
-	show_window $false
-	if ($debug) {show_window $true}
+	hide_window
+	if ($debug) {show_window $false}
 	
 	showTitle $scriptTitle
 	$form = make_form $scriptTitle $icon_path
@@ -213,9 +213,9 @@ function add_label {
 	$label
 }
 
-function show_window {
+function hide_window {
 	param (
-		[bool]$show = $true
+		[bool]$hide = $true
 	)
 	if (-not ("win32.user32" -as [type])) { 
 		Add-Type -Name user32 -NameSpace win32 -MemberDefinition '
