@@ -10,33 +10,29 @@ $scriptTitle = (Get-Item $PSCommandPath).Basename
 $icon_path = "$env:LocalAppData\Microsoft\Edge\User Data\Default\Edge Profile.ico"
 
 $title = [PSCustomObject]@{
-	font = "Microsoft Sans Serif"
-	size = "13"
-	style = ""
+	font = "Segoe UI, 13"
 	color = "Black"
 	symbol = " "
 	x = 10
 	y = 10
 }
 $subtitle = [PSCustomObject]@{
-	font = "Microsoft Sans Serif"
-	size = "10"
-	style = "style=Bold"
+	font = "Segoe UI Semibold, 10"
 	color = [PSCustomObject]@{
-		success = "Green"
-		exit = "Red"
+		success = "DarkGreen"
+		exit = "RoyalBlue"
 	}
 	symbol = [PSCustomObject]@{
 		success = " "
 		exit = " "
 	}
 	x = 30
-	y = 25
+	y = 30
 }
-$global:y = [PSCustomObject]@{
+$y = [PSCustomObject]@{
 	base = 0
-	space = 30
-	form = 75
+	space = 25
+	added = 75
 }
 
 ####################  Main Code  ####################
@@ -44,9 +40,9 @@ $global:y = [PSCustomObject]@{
 function main {
 	param ([String[]]$argz)
 	
-	runWithAdminRights $argz "Minimized"
+	runWithAdminRights $argz $(if ($debug) {"Normal"} else {"Minimized"})
 	hide_window
-	if ($debug) {show_window $false}
+	if ($debug) {hide_window $false}
 	
 	showTitle $scriptTitle
 	$form = make_form $scriptTitle $icon_path
@@ -54,12 +50,12 @@ function main {
 		If (Get-Process "AnyDesk*") {
 			""
 			"${textPrefix}Closing AnyDesk processes..."
-			add_label $form "$($title.symbol)Closing AnyDesk processes..." $title.x ($y.base += $title.y) "$($title.font), $($title.size), $($title.style)"
+			add_label $form "$($title.symbol)Closing AnyDesk processes..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 			Do {
 				Get-Process "AnyDesk*" | Stop-Process -Force
 				$anydesk_is_running = Get-Process "AnyDesk*"
 			} Until (-Not $anydesk_is_running)
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) "$($subtitle.font), $($subtitle.size), $($subtitle.style)" "$($subtitle.color.success)"
+			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
 			$y.base += $y.space
 		}
 		
@@ -72,25 +68,25 @@ function main {
 		If (Test-Path -Path $file_path.backup -PathType Leaf) {
 			""
 			"${textPrefix}Removing old backups..."
-			add_label $form "$($title.symbol)Removing old backups..." $title.x ($y.base += $title.y) "$($title.font), $($title.size), $($title.style)"
+			add_label $form "$($title.symbol)Removing old backups..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 			Remove-Item -Path $file_path.backup -Force
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) "$($subtitle.font), $($subtitle.size), $($subtitle.style)" "$($subtitle.color.success)"
+			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
 			$y.base += $y.space
 		}
 		
 		If (Test-Path -Path $file_path.original -PathType Leaf) {
 			""
 			"${textPrefix}Making backup of affected files..."
-			add_label $form "$($title.symbol)Making backup of affected files..." $title.x ($y.base += $title.y) "$($title.font), $($title.size), $($title.style)"
+			add_label $form "$($title.symbol)Making backup of affected files..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 			Rename-Item -Path $file_path.original -NewName $file_path.backup -Force
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) "$($subtitle.font), $($subtitle.size), $($subtitle.style)" "$($subtitle.color.success)"
+			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
 			$y.base += $y.space
 		}
 		
 		""
 		showTitle "Process Finished"
-		add_label $form "$($title.symbol)${scriptTitle} finished!" $title.x ($y.base += $title.y) "$($title.font), $($title.size), $($title.style)"
-		add_label $form "$($subtitle.symbol.exit)Please close the window" $subtitle.x ($y.base += $subtitle.y) "$($subtitle.font), $($subtitle.size), $($subtitle.style)" "$($subtitle.color.exit)"
+		add_label $form "$($title.symbol)Process finished!" $title.x ($y.base += $title.y) $title.font $title.color $y.added
+		add_label $form "$($subtitle.symbol.exit)You can close the window" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.exit $y.added
 		if ($debug) {"";pause}
 		#quit -form $form
 	})
@@ -174,10 +170,10 @@ function make_form {
 		Text = $title
 		ClientSize = $client_size
 		BackColor = $back_color
-		Icon = New-Object System.Drawing.Icon $icon
 		StartPosition = "CenterScreen"
 		FormBorderStyle = 1	# FormBorderStyle.FixedSingle
 	}
+	if ($icon) {$form.Icon = New-Object System.Drawing.Icon $icon}
 	$form
 }
 
@@ -197,7 +193,9 @@ function add_label {
 		
         [string]$font,
 		
-        [string]$text_color
+        [string]$text_color,
+		
+		[int]$added_height
     )
 	$label = New-Object System.Windows.Forms.Label -Property @{
 		Text = $text
@@ -208,7 +206,7 @@ function add_label {
 		UseCompatibleTextRendering = $true
 	}
 	$form.controls.Add($label)
-	$form.Height = $global:y.form + $y
+	$form.Height = $y + $added_height
 	[System.Windows.Forms.Application]::DoEvents()
 	$label
 }
@@ -223,7 +221,7 @@ function hide_window {
 			public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
 		$global:console_handle = (get-process -id $pid).mainWindowHandle
 	}
-	$null = [win32.user32]::ShowWindow($console_handle, $(if ($show) {5} else {0}))
+	$null = [win32.user32]::ShowWindow($console_handle, $(if ($hide) {0} else {5}))
 }
 
 ####################  Run Main Code  ####################
