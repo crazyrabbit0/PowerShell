@@ -1,9 +1,16 @@
-﻿	
+﻿
 ####################  Variables  ####################
 
 $debug = 0
-$anydesk_folder = "$env:ProgramData\AnyDesk"
-$file_to_rename = "service.conf"
+$adobe_sync_apps = 
+	"${env:ProgramFiles(x86)}\Adobe\Adobe Sync\CoreSync\CoreSync.exe",
+	"$env:ProgramFiles\Adobe\Adobe Creative Cloud Experience\CCXProcess.exe",
+	"$env:CommonProgramFiles\Adobe\Creative Cloud Libraries\CCLibrary.exe"
+$app_rights = [PSCustomObject]@{
+	user = "Everyone"
+	right = "ReadAndExecute"
+	access = "Deny"
+}
 
 $textPrefix = " "
 $scriptTitle = (Get-Item $PSCommandPath).Basename
@@ -38,7 +45,7 @@ $y = [PSCustomObject]@{
 ####################  Main Code  ####################
 
 function main {
-	param ([String[]]$argz)
+	param ([String[]] $argz)
 	
 	runWithAdminRights $argz $(if ($debug) {"Normal"} else {"Minimized"})
 	hide_window
@@ -47,38 +54,53 @@ function main {
 	showTitle $scriptTitle
 	$form = make_form $scriptTitle $icon_path
 	$form.Add_Shown({
-		If (Get-Process "AnyDesk*") {
+		If ((Get-Acl -Path $adobe_sync_apps).Access | Where-Object {$_.IdentityReference -eq $app_rights.user -and $_.FileSystemRights -eq $app_rights.right -and $_.AccessControlType -eq $app_rights.access})
+		{
 			Write-Host ""
-			Write-Host "${textPrefix}Closing AnyDesk processes..."
-			add_label $form "$($title.symbol)Closing AnyDesk processes..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
-			Do {
-				Get-Process "AnyDesk*" | Stop-Process -Force
-				$anydesk_is_running = Get-Process "AnyDesk*"
-			} Until (-Not $anydesk_is_running)
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
-			$y.base += $y.space
-		}
-		
-		$file_path = [PSCustomObject]@{
-			original = "$anydesk_folder\$file_to_rename"
-			backup = "$anydesk_folder\$file_to_rename.bak"
-		}
-		if ($debug) {Write-Output $file_path | Format-List}
-		
-		If (Test-Path -Path $file_path.backup -PathType Leaf) {
+			Write-Host "${textPrefix}Do you want to Unblock the Adobe Sync?"
 			Write-Host ""
-			Write-Host "${textPrefix}Removing old backups..."
-			add_label $form "$($title.symbol)Removing old backups..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
-			Remove-Item -Path $file_path.backup -Force
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
-			$y.base += $y.space
-		}
-		
-		If (Test-Path -Path $file_path.original -PathType Leaf) {
+			Write-Host "${textPrefix} [Y] Yes    [N] No"
 			Write-Host ""
-			Write-Host "${textPrefix}Making backup of affected files..."
-			add_label $form "$($title.symbol)Making backup of affected files..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
-			Rename-Item -Path $file_path.original -NewName $file_path.backup -Force
+			if ($debug) {
+				do {
+					$userChoice = [console]::ReadKey().Key
+					Write-Host -NoNewLine "`r `r"
+				} until($userChoice -match '^[yn]$')
+			}
+			else {
+				$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to Unblock the Adobe Sync?", "Attention:", "YesNo", "Warning", "Button1")
+			}
+			if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
+				Write-Host ""
+				Write-Host "${textPrefix}Unblocking Adobe Sync..."
+				add_label $form "$($title.symbol)Unblocking Adobe Sync..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
+				foreach ($app in $adobe_sync_apps)
+				{
+					$app_permissions = Get-Acl -Path $app
+					$app_permissions.RemoveAccessRule((New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $app_rights.user, $app_rights.right, $app_rights.access)) | Out-Null
+					Set-Acl -Path $app -AclObject $app_permissions
+				}
+				add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
+				$y.base += $y.space
+			}
+			else {
+				Write-Host ""
+				Write-Host "${textPrefix}Unblocking Aborted!"
+				add_label $form "$($title.symbol)Unblocking Aborted!" $title.x ($y.base += $title.y) $title.font $title.color $y.added
+				$y.base += $y.space
+			}
+		}
+		else
+		{
+			Write-Host ""
+			Write-Host "${textPrefix}Blocking Adobe Sync..."
+			add_label $form "$($title.symbol)Blocking Adobe Sync..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
+			foreach ($app in $adobe_sync_apps)
+			{
+				$app_permissions = Get-Acl -Path $app
+				$app_permissions.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($app_rights.user, $app_rights.right, $app_rights.access))) | Out-Null
+				Set-Acl -Path $app -AclObject $app_permissions
+			}
 			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
 			$y.base += $y.space
 		}
@@ -87,7 +109,7 @@ function main {
 		showTitle "Process Finished"
 		add_label $form "$($title.symbol)Process finished!" $title.x ($y.base += $title.y) $title.font $title.color $y.added
 		add_label $form "$($subtitle.symbol.exit)You can close the window" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.exit $y.added
-		if ($debug) {"";pause}
+		#if ($debug) {"";pause}
 		#quit -form $form
 	})
 	$form.ShowDialog()
@@ -143,10 +165,10 @@ function quit {
 		
 		[object]$form
     )
-	Write-Host ""
+	""
 	wait -text $text
 	if ($runPath -ne $null) {Start-Process $runPath $runArgument}
-	Write-Host ""
+	""
 	if ($form -ne $null) {$form.Close()}
 	else {exit}
 }
