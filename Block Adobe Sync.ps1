@@ -27,10 +27,12 @@ $subtitle = [PSCustomObject]@{
 	font = "Segoe UI Semibold, 10"
 	color = [PSCustomObject]@{
 		success = "DarkGreen"
+		fail = "Crimson"
 		exit = "RoyalBlue"
 	}
 	symbol = [PSCustomObject]@{
 		success = " "
+		fail = " "
 		exit = " "
 	}
 	x = 30
@@ -56,12 +58,12 @@ function main {
 	$form.Add_Shown({
 		If ((Get-Acl -Path $adobe_sync_apps).Access | Where-Object {$_.IdentityReference -eq $app_rights.user -and $_.FileSystemRights -eq $app_rights.right -and $_.AccessControlType -eq $app_rights.access})
 		{
-			Write-Host ""
-			Write-Host "${textPrefix}Do you want to Unblock the Adobe Sync?"
-			Write-Host ""
-			Write-Host "${textPrefix} [Y] Yes    [N] No"
-			Write-Host ""
+			Write-Host "`n${textPrefix}Unblocking Adobe Sync..."
+			add_label $form "$($title.symbol)Unblocking Adobe Sync..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 			if ($debug) {
+				Write-Host "`n${textPrefix}Do you want to Unblock the Adobe Sync?"
+				Write-Host "`n${textPrefix} [Y] Yes    [N] No"
+				Write-Host ""
 				do {
 					$userChoice = [console]::ReadKey().Key
 					Write-Host -NoNewLine "`r `r"
@@ -71,29 +73,24 @@ function main {
 				$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to Unblock the Adobe Sync?", "Attention:", "YesNo", "Warning", "Button1")
 			}
 			if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
-				Write-Host ""
-				Write-Host "${textPrefix}Unblocking Adobe Sync..."
-				add_label $form "$($title.symbol)Unblocking Adobe Sync..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 				foreach ($app in $adobe_sync_apps)
 				{
 					$app_permissions = Get-Acl -Path $app
 					$app_permissions.RemoveAccessRule((New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $app_rights.user, $app_rights.right, $app_rights.access)) | Out-Null
 					Set-Acl -Path $app -AclObject $app_permissions
 				}
+				Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
 				add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
-				$y.base += $y.space
 			}
 			else {
-				Write-Host ""
-				Write-Host "${textPrefix}Unblocking Aborted!"
-				add_label $form "$($title.symbol)Unblocking Aborted!" $title.x ($y.base += $title.y) $title.font $title.color $y.added
-				$y.base += $y.space
+				Write-Host "`n${textPrefix}--- Aborted ---" -ForegroundColor "Red"
+				add_label $form "$($subtitle.symbol.fail)Aborted" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.fail $y.added
 			}
+			$y.base += $y.space
 		}
 		else
 		{
-			Write-Host ""
-			Write-Host "${textPrefix}Blocking Adobe Sync..."
+			Write-Host "`n${textPrefix}Blocking Adobe Sync..."
 			add_label $form "$($title.symbol)Blocking Adobe Sync..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 			foreach ($app in $adobe_sync_apps)
 			{
@@ -101,15 +98,17 @@ function main {
 				$app_permissions.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($app_rights.user, $app_rights.right, $app_rights.access))) | Out-Null
 				Set-Acl -Path $app -AclObject $app_permissions
 			}
+			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
 			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
 			$y.base += $y.space
 		}
 		
 		Write-Host ""
 		showTitle "Process Finished"
+		Write-Host "`n${textPrefix}--- You can close the window ---" -ForegroundColor "DarkCyan"
 		add_label $form "$($title.symbol)Process finished!" $title.x ($y.base += $title.y) $title.font $title.color $y.added
 		add_label $form "$($subtitle.symbol.exit)You can close the window" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.exit $y.added
-		#if ($debug) {"";pause}
+		if ($debug) {Write-Host "";Start-Sleep -Seconds 300}
 		#quit -form $form
 	})
 	$form.ShowDialog()
@@ -180,7 +179,7 @@ function make_form {
 		
         [string]$icon,
 		
-        [string]$client_size = "300, 300",
+        [string]$client_size = "300, 0",
 		
         [string]$back_color = "#ffffff"
     )
