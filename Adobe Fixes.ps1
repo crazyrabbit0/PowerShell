@@ -2,28 +2,33 @@
 ####################  Variables  ####################
 
 $debug = 0
-$adobe_sync_apps = 
+$adobe_sync_apps = @(
 	"${env:ProgramFiles(x86)}\Adobe\Adobe Sync\CoreSync\CoreSync.exe",
 	"$env:ProgramFiles\Adobe\Adobe Creative Cloud Experience\CCXProcess.exe",
 	"$env:CommonProgramFiles\Adobe\Creative Cloud Libraries\CCLibrary.exe"
-$app_rights = [PSCustomObject]@{
+)
+$adobe_sync_rights = [PSCustomObject]@{
 	user = "Everyone"
 	right = "ReadAndExecute"
 	access = "Deny"
 }
+$adobe_system_library_folders = @(
+	"${env:CommonProgramFiles(x86)}\Adobe\SLCache",
+	"$env:ProgramData\Adobe\SLStore"
+)
 
 $textPrefix = " "
 $scriptTitle = (Get-Item $PSCommandPath).Basename
 $icon_path = "$env:LocalAppData\Microsoft\Edge\User Data\Default\Edge Profile.ico"
 
-$title = [PSCustomObject]@{
+$titles = [PSCustomObject]@{
 	font = "Segoe UI, 13"
 	color = "Black"
 	symbol = " "
 	x = 10
 	y = 10
 }
-$subtitle = [PSCustomObject]@{
+$subtitles = [PSCustomObject]@{
 	font = "Segoe UI Semibold, 10"
 	color = [PSCustomObject]@{
 		success = "DarkGreen"
@@ -56,12 +61,40 @@ function main {
 	showTitle $scriptTitle
 	$form = make_form $scriptTitle $icon_path
 	$form.Add_Shown({
-		If ((Get-Acl -Path $adobe_sync_apps).Access | Where-Object {$_.IdentityReference -eq $app_rights.user -and $_.FileSystemRights -eq $app_rights.right -and $_.AccessControlType -eq $app_rights.access})
+		$title = "Closing all Adobe Apps"
+		Write-Host "`n${textPrefix}$title..."
+		add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
+		if ($debug) {
+			Write-Host "`n${textPrefix}Do you want to start ${title}?"
+			Write-Host "`n${textPrefix} [Y] Yes    [N] No"
+			Write-Host ""
+			do {
+				$userChoice = [console]::ReadKey().Key
+				Write-Host -NoNewLine "`r `r"
+			} until($userChoice -match '^[yn]$')
+		}
+		else {
+		$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to start ${title}?", "Attention:", "YesNo", "Warning", "Button1")
+		}
+		if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
+			Get-Process "Acrobat*" | Stop-Process -Force
+			Get-Process | Where-Object Company -Match ".*Adobe.*" | Stop-Process -Force
+			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
+			add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
+		}
+		else {
+			Write-Host "`n${textPrefix}--- Aborted ---" -ForegroundColor "Red"
+			add_label $form "$($subtitles.symbol.fail)Aborted" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.fail $y.added
+		}
+		$y.base += $y.space
+		
+		If ((Get-Acl -Path $adobe_sync_apps).Access | Where-Object {$_.IdentityReference -eq $adobe_sync_rights.user -and $_.FileSystemRights -eq $adobe_sync_rights.right -and $_.AccessControlType -eq $adobe_sync_rights.access})
 		{
-			Write-Host "`n${textPrefix}Unblocking Adobe Sync..."
-			add_label $form "$($title.symbol)Unblocking Adobe Sync..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
+			$title = "Unblocking Adobe Sync Apps"
+			Write-Host "`n${textPrefix}$title..."
+			add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
 			if ($debug) {
-				Write-Host "`n${textPrefix}Do you want to Unblock the Adobe Sync?"
+				Write-Host "`n${textPrefix}Do you want to start ${title}?"
 				Write-Host "`n${textPrefix} [Y] Yes    [N] No"
 				Write-Host ""
 				do {
@@ -70,44 +103,72 @@ function main {
 				} until($userChoice -match '^[yn]$')
 			}
 			else {
-				$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to Unblock the Adobe Sync?", "Attention:", "YesNo", "Warning", "Button1")
+				$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to start ${title}?", "Attention:", "YesNo", "Warning", "Button1")
 			}
 			if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
 				foreach ($app in $adobe_sync_apps)
 				{
 					$app_permissions = Get-Acl -Path $app
-					$app_permissions.RemoveAccessRule((New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $app_rights.user, $app_rights.right, $app_rights.access)) | Out-Null
+					$app_permissions.RemoveAccessRule((New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $adobe_sync_rights.user, $adobe_sync_rights.right, $adobe_sync_rights.access)) | Out-Null
 					Set-Acl -Path $app -AclObject $app_permissions
 				}
 				Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
-				add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
+				add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
 			}
 			else {
 				Write-Host "`n${textPrefix}--- Aborted ---" -ForegroundColor "Red"
-				add_label $form "$($subtitle.symbol.fail)Aborted" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.fail $y.added
+				add_label $form "$($subtitles.symbol.fail)Aborted" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.fail $y.added
 			}
 			$y.base += $y.space
 		}
 		else
 		{
-			Write-Host "`n${textPrefix}Blocking Adobe Sync..."
-			add_label $form "$($title.symbol)Blocking Adobe Sync..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
+			$title = "Blocking Adobe Sync Apps"
+			Write-Host "`n${textPrefix}$title..."
+			add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
 			foreach ($app in $adobe_sync_apps)
 			{
 				$app_permissions = Get-Acl -Path $app
-				$app_permissions.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($app_rights.user, $app_rights.right, $app_rights.access))) | Out-Null
+				$app_permissions.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($adobe_sync_rights.user, $adobe_sync_rights.right, $adobe_sync_rights.access))) | Out-Null
 				Set-Acl -Path $app -AclObject $app_permissions
 			}
 			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
+			add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
 			$y.base += $y.space
 		}
+		
+		$title = "Cleaning Adobe System Library"
+		Write-Host "`n${textPrefix}$title..."
+		add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
+		if ($debug) {
+			Write-Host "`n${textPrefix}Do you want to start ${title}?"
+			Write-Host "`n${textPrefix} [Y] Yes    [N] No"
+			Write-Host ""
+			do {
+				$userChoice = [console]::ReadKey().Key
+				Write-Host -NoNewLine "`r `r"
+			} until($userChoice -match '^[yn]$')
+		}
+		else {
+			$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to start ${title}?", "Attention:", "YesNo", "Warning", "Button1")
+		}
+		if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
+			Remove-Item -Path ($adobe_system_library_folders | ForEach-Object {"$_\*"}) -Force
+			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
+			add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
+		}
+		else {
+			Write-Host "`n${textPrefix}--- Aborted ---" -ForegroundColor "Red"
+			add_label $form "$($subtitles.symbol.fail)Aborted" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.fail $y.added
+		}
+		$y.base += $y.space
+		
 		
 		Write-Host ""
 		showTitle "Process Finished"
 		Write-Host "`n${textPrefix}--- You can close the window ---" -ForegroundColor "DarkCyan"
-		add_label $form "$($title.symbol)Process finished!" $title.x ($y.base += $title.y) $title.font $title.color $y.added
-		add_label $form "$($subtitle.symbol.exit)You can close the window" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.exit $y.added
+		add_label $form "$($titles.symbol)Process finished!" $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
+		add_label $form "$($subtitles.symbol.exit)You can close the window" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.exit $y.added
 		if ($debug) {Write-Host "";Start-Sleep -Seconds 300}
 		#quit -form $form
 	})
