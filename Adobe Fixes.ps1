@@ -1,13 +1,13 @@
 ﻿
 ####################  Variables  ####################
 
-$debug = 0
+$debug = 1
 $adobe_sync_apps = @(
 	"${env:ProgramFiles(x86)}\Adobe\Adobe Sync\CoreSync\CoreSync.exe",
 	"$env:ProgramFiles\Adobe\Adobe Creative Cloud Experience\CCXProcess.exe",
 	"$env:CommonProgramFiles\Adobe\Creative Cloud Libraries\CCLibrary.exe"
 )
-$adobe_sync_rights = [PSCustomObject]@{
+$adobe_sync_rights = @{
 	user = "Everyone"
 	right = "ReadAndExecute"
 	access = "Deny"
@@ -19,165 +19,128 @@ $adobe_system_library_folders = @(
 
 $textPrefix = " "
 $scriptTitle = (Get-Item $PSCommandPath).Basename
-$icon_path = "$env:LocalAppData\Microsoft\Edge\User Data\Default\Edge Profile.ico"
+#$icon_path = "$env:LocalAppData\Microsoft\Edge\User Data\Default\Edge Profile.ico"
 
-$titles = [PSCustomObject]@{
-	font = "Segoe UI, 13"
-	color = "Black"
-	symbol = " "
-	x = 10
-	y = 10
+$symbol = @{
+	primary = " "
+	success = " "
+	fail = " "
+	exit = " "
 }
-$subtitles = [PSCustomObject]@{
-	font = "Segoe UI Semibold, 10"
-	color = [PSCustomObject]@{
-		success = "DarkGreen"
-		fail = "Crimson"
-		exit = "RoyalBlue"
-	}
-	symbol = [PSCustomObject]@{
-		success = " "
-		fail = " "
-		exit = " "
-	}
-	x = 30
-	y = 30
+$font = @{
+	primary = "Segoe UI, 13"
+	secondary = "Segoe UI Semibold, 10"
 }
-$y = [PSCustomObject]@{
-	base = 0
-	space = 25
-	added = 75
+$color = @{
+	primary = "Black"
+	secondary = "White"
+	success = "DarkGreen"
+	fail = "Crimson"
+	exit = "RoyalBlue"
 }
+$x = @{
+	primary = 10
+	secondary = 30
+}
+$y = @{
+	primary = 10
+	secondary = 30
+}
+$space = @{
+	next = 25
+	bottom = 75
+}
+$global:current_y = 0
 
 ####################  Main Code  ####################
 
 function main {
 	param ([String[]] $argz)
 	
-	runWithAdminRights $argz $(if ($debug) {"Normal"} else {"Minimized"})
-	hide_window
-	if ($debug) {hide_window $false}
+	run_as_administrator $argz $(if ($debug) {"Normal"} else {"Minimized"})
+	if (-not $debug) {hide_powershell}
 	
-	showTitle $scriptTitle
+	Write-Host "`n===============  $scriptTitle  ===============`n"
+	$form = make_form $scriptTitle $icon_path "250, 0"
+	$close_adobe_apps = add_checkbox $form "Close all Adobe Apps" $x.primary $y.primary $font.primary $color.primary $space.bottom $space.next
+	If ((Get-Acl -Path $adobe_sync_apps).Access | Where-Object {$_.IdentityReference -eq $adobe_sync_rights.user -and $_.FileSystemRights -eq $adobe_sync_rights.right -and $_.AccessControlType -eq $adobe_sync_rights.access}) {
+		$unblock_adobe_sync_apps = add_checkbox $form "Unblock Adobe Sync Apps" $x.primary $y.primary $font.primary $color.primary $space.bottom $space.next
+	}
+	else {
+		$block_adobe_sync_apps = add_checkbox $form "Block Adobe Sync Apps" $x.primary $y.primary $font.primary $color.primary $space.bottom $space.next
+	}
+	$y.current += $spacing.middle
+	$clean_adobe_system_library = add_checkbox $form "Clean Adobe System Library" $x.primary $y.primary $font.primary $color.primary $space.bottom ($space.next * 1.5)
+	$ok_button = add_button $form "" ($x.primary + 25) $y.primary $font.primary $color.secondary $color.success $space.bottom
+	$ok_button.Add_Click({
+		if ($close_adobe_apps.Checked -or $block_adobe_sync_apps.Checked -or $unblock_adobe_sync_apps.Checked -or $clean_adobe_system_library.Checked) {
+			$form.DialogResult = [System.Windows.Forms.DialogResult]::Ok
+		}
+	})
+	$cancel_button = add_button $form "" ($x.primary + 125) $y.current $font.primary $color.secondary $color.fail ($space.bottom * 1.2)
+	$cancel_button.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+	$form_result = $form.ShowDialog()
+	
+	if ($form_result -eq "Cancel") {exit}
+	
 	$form = make_form $scriptTitle $icon_path
 	$form.Add_Shown({
-		$title = "Closing all Adobe Apps"
-		Write-Host "`n${textPrefix}$title..."
-		add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
-		if ($debug) {
-			Write-Host "`n${textPrefix}Do you want to start ${title}?"
-			Write-Host "`n${textPrefix} [Y] Yes    [N] No"
-			Write-Host ""
-			do {
-				$userChoice = [console]::ReadKey().Key
-				Write-Host -NoNewLine "`r `r"
-			} until($userChoice -match '^[yn]$')
-		}
-		else {
-		$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to start ${title}?", "Attention:", "YesNo", "Warning", "Button1")
-		}
-		if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
+		if ($close_adobe_apps.Checked) {
+			$title = "Close all Adobe Apps"
+			Write-Host "`n${textPrefix}$title`:"
+			add_label $form "$($symbol.title)$title`:" $x.primary $y.primary $font.primary $color.primary $space.bottom
 			Get-Process "Acrobat*" | Stop-Process -Force
 			Get-Process | Where-Object Company -Match ".*Adobe.*" | Stop-Process -Force
 			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
-			add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
+			add_label $form "$($symbol.success)Completed" $x.secondary $y.secondary $font.secondary $color.success $space.bottom $space.next
 		}
-		else {
-			Write-Host "`n${textPrefix}--- Aborted ---" -ForegroundColor "Red"
-			add_label $form "$($subtitles.symbol.fail)Aborted" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.fail $y.added
-		}
-		$y.base += $y.space
 		
-		If ((Get-Acl -Path $adobe_sync_apps).Access | Where-Object {$_.IdentityReference -eq $adobe_sync_rights.user -and $_.FileSystemRights -eq $adobe_sync_rights.right -and $_.AccessControlType -eq $adobe_sync_rights.access})
-		{
-			$title = "Unblocking Adobe Sync Apps"
-			Write-Host "`n${textPrefix}$title..."
-			add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
-			if ($debug) {
-				Write-Host "`n${textPrefix}Do you want to start ${title}?"
-				Write-Host "`n${textPrefix} [Y] Yes    [N] No"
-				Write-Host ""
-				do {
-					$userChoice = [console]::ReadKey().Key
-					Write-Host -NoNewLine "`r `r"
-				} until($userChoice -match '^[yn]$')
-			}
-			else {
-				$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to start ${title}?", "Attention:", "YesNo", "Warning", "Button1")
-			}
-			if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
-				foreach ($app in $adobe_sync_apps)
-				{
-					$app_permissions = Get-Acl -Path $app
-					$app_permissions.RemoveAccessRule((New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $adobe_sync_rights.user, $adobe_sync_rights.right, $adobe_sync_rights.access)) | Out-Null
-					Set-Acl -Path $app -AclObject $app_permissions
-				}
-				Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
-				add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
-			}
-			else {
-				Write-Host "`n${textPrefix}--- Aborted ---" -ForegroundColor "Red"
-				add_label $form "$($subtitles.symbol.fail)Aborted" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.fail $y.added
-			}
-			$y.base += $y.space
-		}
-		else
-		{
-			$title = "Blocking Adobe Sync Apps"
-			Write-Host "`n${textPrefix}$title..."
-			add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
-			foreach ($app in $adobe_sync_apps)
-			{
+		if ($block_adobe_sync_apps.Checked) {
+			$title = "Block Adobe Sync Apps"
+			Write-Host "`n${textPrefix}$title`:"
+			add_label $form "$($symbol.title)$title`:" $x.primary $y.primary $font.primary $color.primary $space.bottom
+			foreach ($app in $adobe_sync_apps) {
 				$app_permissions = Get-Acl -Path $app
 				$app_permissions.SetAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($adobe_sync_rights.user, $adobe_sync_rights.right, $adobe_sync_rights.access))) | Out-Null
 				Set-Acl -Path $app -AclObject $app_permissions
 			}
 			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
-			add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
-			$y.base += $y.space
+			add_label $form "$($symbol.success)Completed" $x.secondary $y.secondary $font.secondary $color.success $space.bottom $space.next
 		}
 		
-		$title = "Cleaning Adobe System Library"
-		Write-Host "`n${textPrefix}$title..."
-		add_label $form "$($titles.symbol)$title..." $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
-		if ($debug) {
-			Write-Host "`n${textPrefix}Do you want to start ${title}?"
-			Write-Host "`n${textPrefix} [Y] Yes    [N] No"
-			Write-Host ""
-			do {
-				$userChoice = [console]::ReadKey().Key
-				Write-Host -NoNewLine "`r `r"
-			} until($userChoice -match '^[yn]$')
+		if ($unblock_adobe_sync_apps.Checked) {
+			$title = "Unblock Adobe Sync Apps"
+			Write-Host "`n${textPrefix}$title`:"
+			add_label $form "$($symbol.title)$title`:" $x.primary $y.primary $font.primary $color.primary $space.bottom
+			foreach ($app in $adobe_sync_apps) {
+				$app_permissions = Get-Acl -Path $app
+				$app_permissions.RemoveAccessRule((New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $adobe_sync_rights.user, $adobe_sync_rights.right, $adobe_sync_rights.access)) | Out-Null
+				Set-Acl -Path $app -AclObject $app_permissions
+			}
+			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
+			add_label $form "$($symbol.success)Completed" $x.secondary $y.secondary $font.secondary $color.success $space.bottom $space.next
 		}
-		else {
-			$userChoice = [System.Windows.Forms.MessageBox]::Show("Do you want to start ${title}?", "Attention:", "YesNo", "Warning", "Button1")
-		}
-		if($userChoice -eq 'Yes' -or $userChoice -eq 'y') {
+		
+		if ($clean_adobe_system_library.Checked) {
+			$title = "Clean Adobe System Library"
+			Write-Host "`n${textPrefix}$title`:"
+			add_label $form "$($symbol.title)$title`:" $x.primary $y.primary $font.primary $color.primary $space.bottom
 			Remove-Item -Path ($adobe_system_library_folders | ForEach-Object {"$_\*"}) -Force
 			Write-Host "`n${textPrefix}--- Completed ---" -ForegroundColor "DarkGreen"
-			add_label $form "$($subtitles.symbol.success)Completed" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.success $y.added
+			add_label $form "$($symbol.success)Completed" $x.secondary $y.secondary $font.secondary $color.success $space.bottom $space.next
 		}
-		else {
-			Write-Host "`n${textPrefix}--- Aborted ---" -ForegroundColor "Red"
-			add_label $form "$($subtitles.symbol.fail)Aborted" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.fail $y.added
-		}
-		$y.base += $y.space
 		
-		
-		Write-Host ""
-		showTitle "Process Finished"
+		Write-Host "`n`n===============  Process Finished  ===============`n"
 		Write-Host "`n${textPrefix}--- You can close the window ---" -ForegroundColor "DarkCyan"
-		add_label $form "$($titles.symbol)Process finished!" $titles.x ($y.base += $titles.y) $titles.font $titles.color $y.added
-		add_label $form "$($subtitles.symbol.exit)You can close the window" $subtitles.x ($y.base += $subtitles.y) $subtitles.font $subtitles.color.exit $y.added
-		if ($debug) {Write-Host "";Start-Sleep -Seconds 300}
-		#quit -form $form
+		add_label $form "$($symbol.title)Process finished!" $x.primary $y.primary $font.primary $color.primary $space.bottom
+		add_label $form "$($symbol.exit)You can close the window" $x.secondary $y.secondary $font.secondary $color.exit $space.bottom
 	})
 	$form.ShowDialog()
 }
 
 ####################  Functions  ####################
 
-function runWithAdminRights {
+function run_as_administrator {
     param (
 		[String[]]$argz,
 		
@@ -189,48 +152,17 @@ function runWithAdminRights {
 	}
 }
 
-function showTitle {
+function hide_powershell {
 	param (
-        [Parameter(Mandatory)]
-        [string]$title
-    )
-	Write-Host ""
-	Write-Host "===============  $title  ==============="
-	Write-Host ""
-}
-
-function wait {
-	param (
-        [ValidateNotNullOrEmpty()]
-        [int]$seconds = 3,
-		
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Waiting"
-    )
-	Write-Host -NoNewLine "$text"
-	for($i=0; $i -le $seconds; $i++) {
-		Start-Sleep 1
-		Write-Host -NoNewLine "."
+		[bool]$hide = $true
+	)
+	if (-not ("win32.user32" -as [type])) { 
+		Add-Type -Name user32 -NameSpace win32 -MemberDefinition '
+			[DllImport("user32.dll")]
+			public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
+		$global:console_handle = (get-process -id $pid).mainWindowHandle
 	}
-}
-
-function quit {
-	param (
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Exiting",
-		
-        [string]$runPath,
-		
-        [string]$runArgument,
-		
-		[object]$form
-    )
-	""
-	wait -text $text
-	if ($runPath -ne $null) {Start-Process $runPath $runArgument}
-	""
-	if ($form -ne $null) {$form.Close()}
-	else {exit}
+	$null = [win32.user32]::ShowWindow($console_handle, $(if ($hide) {0} else {5}))
 }
 
 function make_form {
@@ -240,7 +172,7 @@ function make_form {
 		
         [string]$icon,
 		
-        [string]$client_size = "300, 0",
+        [string]$client_size = "300, 300",
 		
         [string]$back_color = "#ffffff"
     )
@@ -256,6 +188,7 @@ function make_form {
 		FormBorderStyle = 1	# FormBorderStyle.FixedSingle
 	}
 	if ($icon) {$form.Icon = New-Object System.Drawing.Icon $icon}
+	$global:current_y = 0
 	$form
 }
 
@@ -277,33 +210,107 @@ function add_label {
 		
         [string]$text_color,
 		
-		[int]$added_height
+		[int]$bottom_space,
+		
+		[int]$next_space = 0
     )
+	$global:current_y += $y
 	$label = New-Object System.Windows.Forms.Label -Property @{
 		Text = $text
-		Location = New-Object System.Drawing.Point($x, $y)
+		Location = New-Object System.Drawing.Point($x, $global:current_y)
 		Font = $font
 		ForeColor = $text_color
 		AutoSize = $true
 		UseCompatibleTextRendering = $true
 	}
 	$form.controls.Add($label)
-	$form.Height = $y + $added_height
+	$form.Height = $global:current_y + $bottom_space
+	$global:current_y += $next_space
 	[System.Windows.Forms.Application]::DoEvents()
 	$label
 }
 
-function hide_window {
+function add_checkbox {
 	param (
-		[bool]$hide = $true
-	)
-	if (-not ("win32.user32" -as [type])) { 
-		Add-Type -Name user32 -NameSpace win32 -MemberDefinition '
-			[DllImport("user32.dll")]
-			public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
-		$global:console_handle = (get-process -id $pid).mainWindowHandle
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [string]$text,
+		
+        [Parameter(Mandatory)]
+        [int]$x,
+		
+        [Parameter(Mandatory)]
+        [int]$y,
+		
+        [string]$font,
+		
+        [string]$text_color,
+		
+		[int]$bottom_space,
+		
+		[int]$next_space = 0
+    )
+	$global:current_y += $y
+	$checkbox = New-Object System.Windows.Forms.CheckBox -Property @{
+		Text = $text
+		Location = New-Object System.Drawing.Point($x, $global:current_y)
+		Font = $font
+		ForeColor = $text_color
+		AutoSize = $true
+		UseCompatibleTextRendering = $true
+		Cursor = [System.Windows.Forms.Cursors]::Hand
 	}
-	$null = [win32.user32]::ShowWindow($console_handle, $(if ($hide) {0} else {5}))
+	$form.controls.Add($checkbox)
+	$form.Height = $global:current_y + $bottom_space
+	$global:current_y += $next_space
+	[System.Windows.Forms.Application]::DoEvents()
+	$checkbox
+}
+
+function add_button {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [string]$text,
+		
+        [Parameter(Mandatory)]
+        [int]$x,
+		
+        [Parameter(Mandatory)]
+        [int]$y,
+		
+        [string]$font,
+		
+        [string]$text_color,
+		
+        [string]$back_color,
+		
+		[int]$bottom_space,
+		
+		[int]$next_space = 0
+    )
+	$global:current_y += $y
+	$button = New-Object System.Windows.Forms.Button -Property @{
+		Text = $text
+		Location = New-Object System.Drawing.Point($x, $global:current_y)
+		Font = $font
+		ForeColor = $text_color
+		BackColor = $back_color
+		AutoSize = $true
+		UseCompatibleTextRendering = $true
+		FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+		Cursor = [System.Windows.Forms.Cursors]::Hand
+	}
+	$button.FlatAppearance.BorderSize = 0
+	$form.controls.Add($button)
+	$form.Height = $global:current_y + $bottom_space
+	$global:current_y += $next_space
+	[System.Windows.Forms.Application]::DoEvents()
+	$button
 }
 
 ####################  Run Main Code  ####################
