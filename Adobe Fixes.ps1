@@ -44,12 +44,19 @@ $global:padding = @{
 	bottom = 50
 }
 
-$view = @{
+$views = @{
 	title = @{
 		top = 30
 		left = 10
 		font = "Segoe UI, 13"
 		color = "Black"
+	}
+	wait = @{
+		top = 30
+		left = 30
+		text = " Please wait..."
+		font = "Segoe UI Semibold, 10"
+		color = "RoyalBlue"
 	}
 	success = @{
 		top = 30
@@ -112,7 +119,7 @@ $view = @{
 	}
 }
 
-$choices = @(
+$actions = @(
 	@{
 		title = " Close all Adobe Apps"
 		checkbox = {}
@@ -152,14 +159,14 @@ function main {
 	
 	Write-Host "`n===============  $scriptTitle  ===============`n"
 	$form = make_form $scriptTitle $icon "280, 0"
-	$select_all_button = add_button $form $view.select_all_button
-	$select_all_button.Add_Click({$choices | ForEach-Object {$_.checkbox.checked = $true}})
-	$deselect_all_button = add_button $form $view.deselect_all_button
-	$deselect_all_button.Add_Click({$choices | ForEach-Object {$_.checkbox.checked = $false}})
-	$choices | ForEach-Object {$_.checkbox = add_checkbox $form $view.title $_.title}
-	$ok_button = add_button $form $view.ok_button
-	$ok_button.Add_Click({if ($choices | Where-Object {$_.checkbox.checked}) {$form.DialogResult = "Ok"}})
-	#$cancel_button = add_button $form $view.cancel_button
+	$select_all_button = add_control $form "button" $views.select_all_button
+	$select_all_button.Add_Click({$actions | ForEach-Object {$_.checkbox.checked = $true}})
+	$deselect_all_button = add_control $form "button" $views.deselect_all_button
+	$deselect_all_button.Add_Click({$actions | ForEach-Object {$_.checkbox.checked = $false}})
+	$actions | ForEach-Object {$_.checkbox = add_control $form "checkbox" $views.title $_.title}
+	$ok_button = add_control $form "button" $views.ok_button
+	$ok_button.Add_Click({if ($actions | Where-Object {$_.checkbox.checked}) {$form.DialogResult = "Ok"}})
+	#$cancel_button = add_control $form "button" $views.cancel_button
 	#$cancel_button.DialogResult = "Cancel"
 	$form.Add_KeyDown({if ($_.KeyCode -eq "Enter") {$ok_button.PerformClick()}})
 	$form_result = $form.ShowDialog()
@@ -167,13 +174,13 @@ function main {
 	if ($form_result -eq "Cancel") {exit}
 	
 	$form = make_form $scriptTitle $icon
-	$choices | ForEach-Object {if ($_.checkbox.Checked) {
-		$null = add_label $form $view.title $_.title
-		$null = add_progressbar $form $view.progressbar $_.title
+	$actions | ForEach-Object {if ($_.checkbox.Checked) {
+		$null = add_control $form "label" $views.title $_.title
+		$null = add_control $form "label" $views.wait -name $_.title
 	}}
 	$form.Add_Shown({
-		$choices | ForEach-Object {if ($_.checkbox.Checked) {run_action $form $view $_}}
-		finish $form $view
+		$actions | ForEach-Object {if ($_.checkbox.Checked) {run_action $form $views $_}}
+		finish $form $views
 	})
 	$form.ShowDialog()
 }
@@ -221,121 +228,79 @@ function make_form {
 	$form
 }
 
-function add_checkbox {
+function add_control {
 	param (
         [Parameter(Mandatory)]
         [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$type,
 		
         [Parameter(Mandatory)]
         [object]$view,
 		
-        [Parameter(Mandatory)]
-        [string]$text
+        [string]$text = $view.text,
+		
+        [string]$name
     )
 	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$checkbox = New-Object System.Windows.Forms.CheckBox -Property @{
+	$control = New-Object System.Windows.Forms.$type -Property @{
 		Top = $global:actual_top
 		Left = $view.left
-		Text = $text
-		Font = $view.font
-		ForeColor = $view.color
-		AutoSize = $true
-		UseCompatibleTextRendering = $true
-		Cursor = "Hand"
-	}
-	$form.Controls.Add($checkbox)
-	$form.Height = $global:actual_top + $checkbox.height + $global:padding.bottom
-	[System.Windows.Forms.Application]::DoEvents()
-	$checkbox
-}
-
-function add_button {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view
-    )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$button = New-Object System.Windows.Forms.Button -Property @{
-		Top = $global:actual_top
-		Left = $view.left
-		Text = $view.text
-		Font = $view.font
-		ForeColor = $view.color
-		UseCompatibleTextRendering = $true
-		FlatStyle = "Flat"
-		Cursor = "Hand"
-	}
-	if ($view.back -ne $null) {$button.BackColor = $view.back}
-	if ($view.height -ne $null) {$button.height = $view.height}
-	if ($view.width -ne $null) {
-		if ($view.width -eq "full") {$button.width = $form.width - $view.left * 2 - 18}
-		else {$button.width = $view.width}
-	}
-	else {$button.AutoSize = $true}
-	
-	$button.FlatAppearance.BorderSize = 0
-	$form.Controls.Add($button)
-	$form.Height = $global:actual_top + $button.height + $global:padding.bottom
-	[System.Windows.Forms.Application]::DoEvents()
-	$button
-}
-
-function add_label {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view,
-		
-        [string]$text = $view.text
-    )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$label = New-Object System.Windows.Forms.Label -Property @{
-		Top = $global:actual_top
-		Left = $view.left
-		Text = $text
-		Font = $view.font
-		ForeColor = $view.color
-		AutoSize = $true
-		UseCompatibleTextRendering = $true
-	}
-	$form.controls.Add($label)
-	$form.height = $global:actual_top + $label.height + $global:padding.bottom
-	[System.Windows.Forms.Application]::DoEvents()
-	$label
-}
-
-function add_progressbar {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view,
-		
-		[string]$name
-    )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$progressbar = New-Object System.Windows.Forms.ProgressBar -Property @{
-		Top = $global:actual_top
-		Left = $view.left
-		Style = "Marquee"
-		MarqueeAnimationSpeed = 20
 		Name = $name
 	}
-	if ($view.height -ne $null) {$progressbar.height = $view.height}
-	if ($view.width -ne $null) {
-		if ($view.width -eq "full") {$progressbar.width = $form.width - $view.left * 2 - 18}
-		else {$progressbar.width = $view.width}
+	$control | ForEach-Object {
+		if ($type -in @("label", "checkbox", "button")) {
+			$_.Text = $text
+			$_.Font = $view.font
+			$_.ForeColor = $view.color
+			$_.UseCompatibleTextRendering = $true
+		}
+		if ($type -in @("checkbox", "button")) {
+			$_.Cursor = "Hand"
+		}
+		if ($type -eq "button") {
+			$_.FlatStyle = "Flat"
+			$_.FlatAppearance.BorderSize = 0
+		}
+		elseif ($type -eq "progressbar") {
+			$_.Style = "Marquee"
+			$_.MarqueeAnimationSpeed = 20
+		}
+		if ($view.back -ne $null) {$_.BackColor = $view.back}
+		if ($view.height -eq $null -and $view.width -eq $null) {$control.AutoSize = $true}
+		else {
+			$_.height = $view.height
+			if ($view.width -eq "full") {$_.width = $form.width - $view.left * 2 - 18}
+			else {$_.width = $view.width}
+		}
 	}
-	$form.Controls.Add($progressbar)
-	$form.Height = $global:actual_top + $progressbar.height + $global:padding.bottom
+	$form.Controls.Add($control)
+	if ($view.bottom -ne $null) {$global:actual_top += $view.bottom}
+	$form.Height = $global:actual_top + $control.height + $global:padding.bottom
 	[System.Windows.Forms.Application]::DoEvents()
-	$progressbar
+	$control
+}
+
+function replace_control {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [string]$control_name,
+		
+        [Parameter(Mandatory)]
+        [object]$new_type,
+		
+        [Parameter(Mandatory)]
+        [object]$new_view
+    )
+	$top = $form.Controls[$control_name].top
+	$form.Controls[$control_name].Dispose()
+	add_control $form $new_type $new_view -name $control_name
+	$form.Controls[$control_name].Top = $top
+	$global:actual_top -= $new_view.top
 }
 
 function run_action {
@@ -344,20 +309,19 @@ function run_action {
         [object]$form,
 		
         [Parameter(Mandatory)]
-        [object]$view,
+        [object]$views,
 		
         [Parameter(Mandatory)]
-        [object]$choice
+        [object]$action
     )
 	$form.Cursor = "WaitCursor"
-	Write-Host "`n $($choice.title)"
-	$job = Start-Job -ScriptBlock $choice.code -ArgumentList $choice.code_arguments #| Receive-Job -AutoRemoveJob -Wait
+	Write-Host "`n $($action.title)"
+	replace_control $form $action.title "progressbar" $views.progressbar
+	$job = Start-Job -ScriptBlock $action.code -ArgumentList $action.code_arguments #| Receive-Job -AutoRemoveJob -Wait
 	do {[System.Windows.Forms.Application]::DoEvents()} until ($job.State -eq "Completed")
 	Remove-Job -Job $job
-	Write-Host "`n --- $($view.success.text) ---" -ForegroundColor "DarkGreen"
-	(add_label $form $view.success).Top = $form.Controls[$choice.title].Top
-	$global:actual_top -= $view.success.top
-	$form.Controls[$choice.title].Dispose()
+	Write-Host "`n --- $($views.success.text) ---" -ForegroundColor "DarkGreen"
+	replace_control $form $action.title "label" $views.success
 	$form.Cursor = "Default"
 }
 
@@ -367,14 +331,14 @@ function finish {
         [object]$form,
 		
         [Parameter(Mandatory)]
-        [object]$view,
+        [object]$views,
 		
         [string]$text = " Process Finished"
     )
 	Write-Host "`n`n===============  $text  ===============`n"
-	add_label $form $view.title "$text"
-	Write-Host "`n --- $($view.exit.text) ---" -ForegroundColor "DarkCyan"
-	add_label $form $view.exit
+	add_control $form "label" $views.title "$text"
+	Write-Host "`n --- $($views.exit.text) ---" -ForegroundColor "DarkCyan"
+	add_control $form "label" $views.exit
 }
 
 function set_form_icon {
