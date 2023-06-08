@@ -89,12 +89,12 @@ $view = @{
 	ok_button = @{
 		top = 40
 		left = 10
+		width = "full"
+		height = 30
 		text = ""
 		font = "Segoe UI Symbol, 13"
 		color = "White"
 		back = "DarkGreen"
-		width = "full"
-		height = 30
 	}
 	cancel_button = @{
 		top = 0
@@ -106,7 +106,9 @@ $view = @{
 	}
 	progressbar = @{
 		top = 30
-		left = 10
+		left = 15
+		width = "full"
+		height = 10
 	}
 }
 
@@ -165,8 +167,12 @@ function main {
 	if ($form_result -eq "Cancel") {exit}
 	
 	$form = make_form $scriptTitle $icon
+	$choices | ForEach-Object {if ($_.checkbox.Checked) {
+		$null = add_label $form $view.title $_.title
+		$null = add_progressbar $form $view.progressbar $_.title
+	}}
 	$form.Add_Shown({
-		$choices | ForEach-Object {if ($_.checkbox.Checked) {run_action $form $view $_}}		
+		$choices | ForEach-Object {if ($_.checkbox.Checked) {run_action $form $view $_}}
 		finish $form $view
 	})
 	$form.ShowDialog()
@@ -183,6 +189,222 @@ function hide_powershell {
 		[DllImport("user32.dll")]
 		public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
 	[win32.user32]::ShowWindow($global:console_handle, $(if ($hide) {0} else {5}))
+}
+
+function make_form {
+	param (
+        [Parameter(Mandatory)]
+        [string]$title,
+		
+        [object]$icon,
+		
+        [string]$client_size = "300, 0",
+		
+        [string]$back_color = "#ffffff"
+    )
+	Add-Type -AssemblyName System.Windows.Forms
+	[System.Windows.Forms.Application]::EnableVisualStyles()
+	$form = New-Object System.Windows.Forms.Form -Property @{
+		Text = $title
+		ClientSize = $client_size
+		BackColor = $back_color
+		StartPosition = "CenterScreen"
+		FormBorderStyle = 1	# Not resizable
+		KeyPreview = $true
+	}
+	$form.Add_KeyDown({
+        if ($_.KeyCode -eq "Escape") {$form.close()}
+    })
+	if ($icon) {set_form_icon $form $icon}
+	set_form_app_id $form $title # Set Form Icon as Taskbar Icon
+	$global:actual_top = 0
+	$form
+}
+
+function add_checkbox {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$view,
+		
+        [Parameter(Mandatory)]
+        [string]$text
+    )
+	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
+	$checkbox = New-Object System.Windows.Forms.CheckBox -Property @{
+		Top = $global:actual_top
+		Left = $view.left
+		Text = $text
+		Font = $view.font
+		ForeColor = $view.color
+		AutoSize = $true
+		UseCompatibleTextRendering = $true
+		Cursor = "Hand"
+	}
+	$form.Controls.Add($checkbox)
+	$form.Height = $global:actual_top + $checkbox.height + $global:padding.bottom
+	[System.Windows.Forms.Application]::DoEvents()
+	$checkbox
+}
+
+function add_button {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$view
+    )
+	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
+	$button = New-Object System.Windows.Forms.Button -Property @{
+		Top = $global:actual_top
+		Left = $view.left
+		Text = $view.text
+		Font = $view.font
+		ForeColor = $view.color
+		UseCompatibleTextRendering = $true
+		FlatStyle = "Flat"
+		Cursor = "Hand"
+	}
+	if ($view.back -ne $null) {$button.BackColor = $view.back}
+	if ($view.height -ne $null) {$button.height = $view.height}
+	if ($view.width -ne $null) {
+		if ($view.width -eq "full") {$button.width = $form.width - $view.left * 2 - 18}
+		else {$button.width = $view.width}
+	}
+	else {$button.AutoSize = $true}
+	
+	$button.FlatAppearance.BorderSize = 0
+	$form.Controls.Add($button)
+	$form.Height = $global:actual_top + $button.height + $global:padding.bottom
+	[System.Windows.Forms.Application]::DoEvents()
+	$button
+}
+
+function add_label {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$view,
+		
+        [string]$text = $view.text
+    )
+	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
+	$label = New-Object System.Windows.Forms.Label -Property @{
+		Top = $global:actual_top
+		Left = $view.left
+		Text = $text
+		Font = $view.font
+		ForeColor = $view.color
+		AutoSize = $true
+		UseCompatibleTextRendering = $true
+	}
+	$form.controls.Add($label)
+	$form.height = $global:actual_top + $label.height + $global:padding.bottom
+	[System.Windows.Forms.Application]::DoEvents()
+	$label
+}
+
+function add_progressbar {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$view,
+		
+		[string]$name
+    )
+	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
+	$progressbar = New-Object System.Windows.Forms.ProgressBar -Property @{
+		Top = $global:actual_top
+		Left = $view.left
+		Style = "Marquee"
+		MarqueeAnimationSpeed = 20
+		Name = $name
+	}
+	if ($view.height -ne $null) {$progressbar.height = $view.height}
+	if ($view.width -ne $null) {
+		if ($view.width -eq "full") {$progressbar.width = $form.width - $view.left * 2 - 18}
+		else {$progressbar.width = $view.width}
+	}
+	$form.Controls.Add($progressbar)
+	$form.Height = $global:actual_top + $progressbar.height + $global:padding.bottom
+	[System.Windows.Forms.Application]::DoEvents()
+	$progressbar
+}
+
+function run_action {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$view,
+		
+        [Parameter(Mandatory)]
+        [object]$choice
+    )
+	$form.Cursor = "WaitCursor"
+	Write-Host "`n $($choice.title)"
+	$job = Start-Job -ScriptBlock $choice.code -ArgumentList $choice.code_arguments #| Receive-Job -AutoRemoveJob -Wait
+	do {[System.Windows.Forms.Application]::DoEvents()} until ($job.State -eq "Completed")
+	Remove-Job -Job $job
+	Write-Host "`n --- $($view.success.text) ---" -ForegroundColor "DarkGreen"
+	(add_label $form $view.success).Top = $form.Controls[$choice.title].Top
+	$global:actual_top -= $view.success.top
+	$form.Controls[$choice.title].Dispose()
+	$form.Cursor = "Default"
+}
+
+function finish {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$view,
+		
+        [string]$text = " Process Finished"
+    )
+	Write-Host "`n`n===============  $text  ===============`n"
+	add_label $form $view.title "$text"
+	Write-Host "`n --- $($view.exit.text) ---" -ForegroundColor "DarkCyan"
+	add_label $form $view.exit
+}
+
+function set_form_icon {
+	param (
+        [Parameter(Mandatory)]
+        [object]$form,
+		
+        [Parameter(Mandatory)]
+        [object]$icon
+    )
+	Add-Type -TypeDefinition '
+		using System;
+		using System.Drawing;
+		using System.Runtime.InteropServices;
+
+		namespace System {
+			public class IconExtractor {
+				public static Icon Extract(string file, int number, bool largeIcon) {
+					IntPtr large;
+					IntPtr small;
+					ExtractIconEx(file, number, out large, out small, 1);
+					try {return Icon.FromHandle(largeIcon ? large : small);}
+					catch {return null;}
+				}
+				[DllImport("Shell32.dll", EntryPoint = "ExtractIconExW", CharSet = CharSet.Unicode, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+					private static extern int ExtractIconEx(string sFile, int iIndex, out IntPtr piLargeVersion, out IntPtr piSmallVersion, int amountIcons);
+			}
+		}
+	' -ReferencedAssemblies System.Drawing
+	$form.Icon = [System.IconExtractor]::Extract($icon.file, $icon.index, $true)
 }
 
 function set_form_app_id{
@@ -268,225 +490,6 @@ function set_form_app_id{
 		}
 	'
 	[PSAppID]::SetAppIdForWindow($form.Handle, $app_id)
-}
-
-function set_form_icon {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$icon
-    )
-	Add-Type -TypeDefinition '
-		using System;
-		using System.Drawing;
-		using System.Runtime.InteropServices;
-
-		namespace System {
-			public class IconExtractor {
-				public static Icon Extract(string file, int number, bool largeIcon) {
-					IntPtr large;
-					IntPtr small;
-					ExtractIconEx(file, number, out large, out small, 1);
-					try {return Icon.FromHandle(largeIcon ? large : small);}
-					catch {return null;}
-				}
-				[DllImport("Shell32.dll", EntryPoint = "ExtractIconExW", CharSet = CharSet.Unicode, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
-					private static extern int ExtractIconEx(string sFile, int iIndex, out IntPtr piLargeVersion, out IntPtr piSmallVersion, int amountIcons);
-			}
-		}
-	' -ReferencedAssemblies System.Drawing
-	$form.Icon = [System.IconExtractor]::Extract($icon.file, $icon.index, $true)
-}
-
-function make_form {
-	param (
-        [Parameter(Mandatory)]
-        [string]$title,
-		
-        [object]$icon,
-		
-        [string]$client_size = "300, 0",
-		
-        [string]$back_color = "#ffffff"
-    )
-	Add-Type -AssemblyName System.Windows.Forms
-	[System.Windows.Forms.Application]::EnableVisualStyles()
-	$form = New-Object System.Windows.Forms.Form -Property @{
-		Text = $title
-		ClientSize = $client_size
-		BackColor = $back_color
-		StartPosition = "CenterScreen"
-		FormBorderStyle = 1	# Not resizable
-		KeyPreview = $true
-	}
-	$form.Add_KeyDown({
-        if ($_.KeyCode -eq "Escape") {$form.close()}
-    })
-	if ($icon) {set_form_icon $form $icon}
-	set_form_app_id $form $title # Set Form Icon as Taskbar Icon
-	$global:actual_top = 0
-	$form
-}
-
-function add_checkbox {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view,
-		
-        [Parameter(Mandatory)]
-        [string]$text
-    )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$checkbox = New-Object System.Windows.Forms.CheckBox -Property @{
-		Location = "$($view.left), ${global:actual_top}"
-		Text = $text
-		Font = $view.font
-		ForeColor = $view.color
-		AutoSize = $true
-		UseCompatibleTextRendering = $true
-		Cursor = "Hand"
-	}
-	$form.Controls.Add($checkbox)
-	$form.Height = $global:actual_top + $checkbox.height + $global:padding.bottom
-	[System.Windows.Forms.Application]::DoEvents()
-	$checkbox
-}
-
-function add_button {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view
-    )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$button = New-Object System.Windows.Forms.Button -Property @{
-		Location = "$($view.left), ${global:actual_top}"
-		Text = $view.text
-		Font = $view.font
-		ForeColor = $view.color
-		UseCompatibleTextRendering = $true
-		FlatStyle = "Flat"
-		Cursor = "Hand"
-	}
-	if ($view.back -ne $null) {$button.BackColor = $view.back}
-	if ($view.height -ne $null) {$button.height = $view.height}
-	if ($view.width -eq "full") {$button.width = $form.width - 38} else {$button.AutoSize = $true}
-	$button.FlatAppearance.BorderSize = 0
-	$form.Controls.Add($button)
-	$form.Height = $global:actual_top + $button.height + $global:padding.bottom
-	[System.Windows.Forms.Application]::DoEvents()
-	$button
-}
-
-function add_label {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view,
-		
-        [string]$text = $view.text
-    )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$label = New-Object System.Windows.Forms.Label -Property @{
-		Location = "$($view.left), ${global:actual_top}"
-		Text = $text
-		Font = $view.font
-		ForeColor = $view.color
-		AutoSize = $true
-		UseCompatibleTextRendering = $true
-	}
-	$form.controls.Add($label)
-	$form.height = $global:actual_top + $label.height + $global:padding.bottom
-	[System.Windows.Forms.Application]::DoEvents()
-	$label
-}
-
-function add_progressbar {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view
-    )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
-	$progressbar = New-Object System.Windows.Forms.ProgressBar -Property @{
-		Location = "$($view.left), ${global:actual_top}"
-		Size = "$($form.width - 40), 10"
-		Style = "Marquee"
-		MarqueeAnimationSpeed = 20
-	}
-	$form.Controls.Add($progressbar)
-	$form.Height = $global:actual_top + $progressbar.height + $global:padding.bottom
-	[System.Windows.Forms.Application]::DoEvents()
-	$progressbar
-}
-
-function run_with_progressbar {
-	param (
-		[Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view,
-		
-        [Parameter(Mandatory)]
-        [ScriptBlock]$code,
-		
-        [object[]]$code_arguments
-    )
-	$form.Cursor = "WaitCursor"
-	$progressbar = add_progressbar $form $view
-	$job = Start-Job -ScriptBlock $code -ArgumentList $code_arguments #| Receive-Job -AutoRemoveJob -Wait
-	do {[System.Windows.Forms.Application]::DoEvents()} until ($job.State -eq "Completed")
-	Remove-Job -Job $job
-	$form.Controls.Remove($progressbar)
-	$form.Cursor = "Default"
-	$global:actual_top -= $view.top
-}
-
-function run_action {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view,
-		
-        [Parameter(Mandatory)]
-        [object]$choice
-    )
-	Write-Host "`n $($choice.title)"
-	add_label $form $view.title $choice.title
-	run_with_progressbar $form $view.progressbar $choice.code $choice.code_arguments
-	Write-Host "`n --- $($view.success.text) ---" -ForegroundColor "DarkGreen"
-	add_label $form $view.success
-	
-}
-
-function finish {
-	param (
-        [Parameter(Mandatory)]
-        [object]$form,
-		
-        [Parameter(Mandatory)]
-        [object]$view,
-		
-        [string]$text = " Process Finished"
-    )
-	Write-Host "`n`n===============  $text  ===============`n"
-	add_label $form $view.title "$text"
-	Write-Host "`n --- $($view.exit.text) ---" -ForegroundColor "DarkCyan"
-	add_label $form $view.exit
 }
 
 #-----------------------------------------------------------Run Main Code-----------------------------------------------------------#
