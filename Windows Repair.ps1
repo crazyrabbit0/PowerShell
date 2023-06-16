@@ -1,7 +1,7 @@
 ﻿
 #-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
-$debug = 1
+$debug = 0
 $has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 if (-not $has_admin_rights) {Start-Process -Verb RunAs -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}) -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
 
