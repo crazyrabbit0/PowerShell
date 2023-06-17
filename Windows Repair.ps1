@@ -146,7 +146,7 @@ $actions = @(
 			}
 			catch {return 0}
 		}
-		log_code = {if ($LastExitCode -eq 0) {return [string](Get-EventLog -LogName "Application" -Source "ChkDsk")[0].Message}}
+		#log_code = {return (Get-EventLog -LogName "Application" -Source "ChkDsk")[0].Message}
 	},
 	@{
 		title = " Repair Windows Image"
