@@ -3,7 +3,7 @@
 
 $debug = 0
 $has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-if (-not $has_admin_rights) {Start-Process -Verb RunAs -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}) -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
+if (-not $has_admin_rights) {Start-Process -Verb "RunAs" -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}) -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
 
 #-----------------------------------------------------------Variables-----------------------------------------------------------#
 
@@ -444,7 +444,10 @@ function finish {
 	Write-Host "`n --- $($views.exit.text) ---" -ForegroundColor $views.exit.console_color
 	add_control $form "label" $views.exit
 	add_control $form "button" $views.restart_button | ForEach-Object {
-		$_.Add_Click({Start-Process -FilePath "ShutDown" -ArgumentList "\R \T 0"})
+		$_.Add_Click({
+			Start-Process -FilePath "ShutDown" -ArgumentList "/r /t 0" -WindowStyle "Hidden"
+			Start-Process -FilePath "TaskKill" -ArgumentList "/f /t /pid $pid" -WindowStyle "Hidden"
+		})
 	}
 }
 
