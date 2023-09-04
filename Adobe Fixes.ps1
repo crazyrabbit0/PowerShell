@@ -20,23 +20,14 @@ $adobe = @{
 			"$env:ProgramFiles\Adobe\Adobe Creative Cloud Experience\CCXProcess.exe",
 			"$env:CommonProgramFiles\Adobe\Creative Cloud Libraries\CCLibrary.exe"
 		)
-		rights = @{
-			user = "Everyone"
-			right = "ReadAndExecute"
-			access = "Deny"
-		}
-		is_blocked = {}
+		is_enabled = {}
 	}
 	system_library_folders = @(
 		"${env:CommonProgramFiles(x86)}\Adobe\SLCache",
 		"$env:ProgramData\Adobe\SLStore"
 	)
 }
-$adobe.sync.is_blocked = (Get-Acl -Path $adobe.sync.apps).Access | Where-Object {
-	$_.IdentityReference -eq $adobe.sync.rights.user -and
-	$_.FileSystemRights -eq $adobe.sync.rights.right -and
-	$_.AccessControlType -eq $adobe.sync.rights.access
-}
+$adobe.sync.is_enabled = Test-Path -Path $adobe.sync.apps | Where-Object {$_}
 
 $global:actual_top = 0
 $global:padding = @{
@@ -130,14 +121,14 @@ $actions = @(
 		code_arguments = {}
 	},
 	@{
-		title = If ($adobe.sync.is_blocked) {" Unblock Adobe Sync Apps"} else {" Block Adobe Sync Apps"}
+		title = $(If ($adobe.sync.is_enabled) {" Block "} else {" Unblock "}) + "Adobe Sync Apps"
 		checkbox = {}
 		code = {
-			foreach ($app in $args.apps) {
-				$app_permissions = Get-Acl -Path $app
-				$block_permission = New-Object System.Security.AccessControl.FileSystemAccessRule($args.rights.user, $args.rights.right, $args.rights.access)
-				If ($args.is_blocked) {$app_permissions.RemoveAccessRule($block_permission)} else {$app_permissions.SetAccessRule($block_permission)}
-				Set-Acl -Path $app -AclObject $app_permissions
+			If ($args.is_enabled) {
+				$args.apps | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {"$($_.Name).bak"}
+			}
+			else {
+				$args.apps | ForEach-Object {"$_.bak"} | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {$_.Name  -replace ".bak", ""}
 			}
 		}
 		code_arguments = $adobe.sync
