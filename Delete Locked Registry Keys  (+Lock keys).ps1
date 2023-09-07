@@ -8,7 +8,7 @@ if (-not $has_admin_rights) {Start-Process -Verb "RunAs" -FilePath "powershell.e
 
 #	Override Exceptions
 $ErrorActionPreference = "SilentlyContinue"
-#	Registry Root Path  (Default: SOFTWARE\Classes\WOW6432Node\CLSID)
+#	Registry Root Path without Base  (Default: SOFTWARE\Classes\WOW6432Node\CLSID)
 $keysPath = "SOFTWARE\Classes\WOW6432Node\CLSID\.Test"
 
 #-----------------------------------------------------------Main Code-----------------------------------------------------------#
