@@ -12,7 +12,7 @@ function main {
 	Add-Type -AssemblyName System.Windows.Forms
 	Start-Process -FilePath "X_80.contrast-white.png"
 	Start-Sleep 1
-	[System.Windows.Forms.SendKeys]::SendWait('{F5}')
+	[System.Windows.Forms.SendKeys]::SendWait('{F11}')
 	if($debug) { "";pause }
 }
 
