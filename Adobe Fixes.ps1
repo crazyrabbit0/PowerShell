@@ -22,12 +22,19 @@ $adobe = @{
 		)
 		is_enabled = {}
 	}
+	acrobat_update = @{
+		apps = @(
+			"${env:CommonProgramFiles(x86)}\Adobe\ARM\1.0\AdobeARM.exe"
+		)
+		is_enabled = {}
+	}
 	system_library_folders = @(
 		"${env:CommonProgramFiles(x86)}\Adobe\SLCache",
 		"$env:ProgramData\Adobe\SLStore"
 	)
 }
 $adobe.sync.is_enabled = Test-Path -Path $adobe.sync.apps | Where-Object {$_}
+$adobe.acrobat_update.is_enabled = Test-Path -Path $adobe.acrobat_update.apps | Where-Object {$_}
 
 $global:actual_top = 0
 $global:padding = @{
@@ -112,7 +119,7 @@ $views = @{
 
 $actions = @(
 	@{
-		title = " Close all Adobe Apps"
+		title = " Close All Adobe Apps"
 		checkbox = {}
 		code = {
 			Get-Process "Acrobat*" | Stop-Process -Force
@@ -125,13 +132,32 @@ $actions = @(
 		checkbox = {}
 		code = {
 			If ($args.is_enabled) {
-				$args.apps | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {"$($_.Name).bak"}
+				$args.apps | Get-ChildItem -ErrorAction SilentlyContinue | ForEach-Object {
+					"$_.bak" | Get-ChildItem -ErrorAction SilentlyContinue | Remove-Item
+					Rename-Item -Path "$_" -NewName "$_.bak"
+				}
 			}
 			else {
 				$args.apps | ForEach-Object {"$_.bak"} | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {$_.Name  -replace ".bak", ""}
 			}
 		}
 		code_arguments = $adobe.sync
+	},
+	@{
+		title = $(If ($adobe.acrobat_update.is_enabled) {" Block "} else {" Unblock "}) + "Acrobat Updater"
+		checkbox = {}
+		code = {
+			If ($args.is_enabled) {
+				$args.apps | Get-ChildItem -ErrorAction SilentlyContinue | ForEach-Object {
+					"$_.bak" | Get-ChildItem -ErrorAction SilentlyContinue | Remove-Item
+					Rename-Item -Path "$_" -NewName "$_.bak"
+				}
+			}
+			else {
+				$args.apps | ForEach-Object {"$_.bak"} | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {$_.Name  -replace ".bak", ""}
+			}
+		}
+		code_arguments = $adobe.acrobat_update
 	},
 	@{
 		title = " Clean Adobe System Library"
