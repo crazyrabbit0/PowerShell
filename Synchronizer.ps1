@@ -55,7 +55,7 @@ function main {
 		"Chrome (64-bit)" `
 		"$env:LocalAppData\Google\Chrome\User Data" `
 		"$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data" `
-		"BrowserMetrics", "Cache", "Code Cache", "GPUCache"
+		"BrowserMetrics", "Cache", "Code Cache", "GPUCache", "CacheStorage", "optimization_guide_prediction_model_downloads"
 	
 	exportRegistry `
 		"7-Zip (64-bit)" `
