@@ -13,6 +13,84 @@ $icon = @{
 	index = 143
 }
 
+$actions = @(
+	@{
+		title = " Clean Disk"
+		code = {
+			Start-Process -FilePath "CleanMgr" -Wait
+			#Start-Process -FilePath "CleanMgr" -ArgumentList "/LowDisk" -Wait
+			#Start-Process -FilePath "CleanMgr" -ArgumentList "/VeryLowDisk" -Wait
+		}
+	},
+	@{
+		title = " Check Disk"
+		code = {
+			ChkDsk /Scan /Perf #/R
+			#ChkDsk /F #/R
+		}
+		percentage_code = {
+			Param ([object]$job)
+			try {
+				$last_stage = [int](Receive-job -Job $job -Keep | Select-String 'Stage (\d+)').Matches[-1].Groups[1].Value
+				return $last_stage * 33
+			}
+			catch {return 0}
+		}
+		#log_code = {return (Get-EventLog -LogName "Application" -Source "ChkDsk")[0].Message}
+	},
+	@{
+		title = " Repair Windows Image"
+		code = {
+			#Dism /Cleanup-Wims
+			#Dism /Online /Cleanup-Image /CheckHealth
+			#Dism /Online /Cleanup-Image /ScanHealth
+			#Dism /Online /Cleanup-Image /StartComponentCleanup #/ResetBase
+			#Dism /Online /Cleanup-Image /AnalyzeComponentStore
+			Dism /Online /Cleanup-Image /RestoreHealth #/Source:D:\sources\install.wim /LimitAcces
+		}
+		percentage_code = {
+			Param ([object]$job)
+			try {
+				$percentage = [int](Receive-job $job -Keep | Select-String '(\d+)\.\d+%').Matches[-1].Groups[1].Value
+				return $percentage
+			}
+			catch {return 0}
+		}
+		#log_code = {return (Get-Content -Path "$env:WinDir\Logs\DISM\DISM.log") -Join "`r`n"}
+	},
+	@{
+		title = " Repair System Files"
+		code = {
+			Sfc /ScanNow
+		}
+		percentage_code = {
+			Param ([object]$job)
+			try {
+				$percentage_string = (Receive-job $job -Keep | Select-String '\s+(.+)%').Matches[-1].Groups[1].Value
+				$percentage = [int]($percentage_string -Replace $percentage_string[0], '')
+				return $percentage
+			}
+			catch {return 0}
+		}
+		#log_code = {return (Get-Content -Path "$env:WinDir\Logs\CBS\CBS.log") -Join "`r`n"}
+	},
+	@{
+		title = " Optimize Disk"
+		code = {
+			Start-Process -FilePath "DfrGui" -Wait
+		}
+	}
+)
+
+$global:error_check_code = {
+	if (-not ($? -and $LastExitCode -in (0, $null))) {Throw "Operation failed, with exit code: $LastExitCode"}
+}
+
+$global:padding = @{
+	top = 1
+	bottom = 50
+}
+
 $views = @{
 	title = @{
 		top = 35
@@ -117,81 +195,6 @@ $views = @{
 		back = "Crimson"
 	}
 }
-$global:padding = @{
-	top = 1
-	bottom = 50
-}
-$global:actual_top = 0
-
-$actions = @(
-	@{
-		title = " Clean Disk"
-		code = {
-			Start-Process -FilePath "CleanMgr" -Wait
-			#Start-Process -FilePath "CleanMgr" -ArgumentList "/LowDisk" -Wait
-			#Start-Process -FilePath "CleanMgr" -ArgumentList "/VeryLowDisk" -Wait
-		}
-	},
-	@{
-		title = " Check Disk"
-		code = {
-			ChkDsk /Scan /Perf #/R
-			#ChkDsk /F #/R
-		}
-		percentage_code = {
-			Param ([object]$job)
-			try {
-				$last_stage = [int](Receive-job -Job $job -Keep | Select-String 'Stage (\d+)').Matches[-1].Groups[1].Value
-				return $last_stage * 33
-			}
-			catch {return 0}
-		}
-		#log_code = {return (Get-EventLog -LogName "Application" -Source "ChkDsk")[0].Message}
-	},
-	@{
-		title = " Repair Windows Image"
-		code = {
-			#Dism /Cleanup-Wims
-			#Dism /Online /Cleanup-Image /CheckHealth
-			#Dism /Online /Cleanup-Image /ScanHealth
-			#Dism /Online /Cleanup-Image /StartComponentCleanup #/ResetBase
-			#Dism /Online /Cleanup-Image /AnalyzeComponentStore
-			Dism /Online /Cleanup-Image /RestoreHealth #/Source:D:\sources\install.wim /LimitAcces
-		}
-		percentage_code = {
-			Param ([object]$job)
-			try {
-				$percentage = [int](Receive-job $job -Keep | Select-String '(\d+)\.\d+%').Matches[-1].Groups[1].Value
-				return $percentage
-			}
-			catch {return 0}
-		}
-		log_code = {return (Get-Content -Path "$env:WinDir\Logs\DISM\DISM.log") -Join "`r`n"}
-	},
-	@{
-		title = " Repair System Files"
-		code = {
-			Sfc /ScanNow
-		}
-		percentage_code = {
-			Param ([object]$job)
-			try {
-				$percentage_string = (Receive-job $job -Keep | Select-String '\s+(.+)%').Matches[-1].Groups[1].Value
-				$percentage = [int]($percentage_string -Replace $percentage_string[0], '')
-				return $percentage
-			}
-			catch {return 0}
-		}
-		log_code = {return (Get-Content -Path "$env:WinDir\Logs\CBS\CBS.log") -Join "`r`n"}
-	},
-	@{
-		title = " Optimize Disk"
-		code = {
-			Start-Process -FilePath "DfrGui" -Wait
-		}
-	}
-)
-$global:error_check_code = {if (-not ($? -and $LastExitCode -in (0, $null))) {Throw "Operation failed, with exit code: $LastExitCode"}}
 
 #-----------------------------------------------------------Main Code-----------------------------------------------------------#
 
@@ -278,7 +281,7 @@ function make_form {
 	$form.Add_KeyDown({if ($_.KeyCode -eq "Escape") {$form.close()}})
 	if ($icon) {set_form_icon $form $icon}
 	set_form_app_id $form $title	# Set Form Icon as Taskbar Icon
-	$global:actual_top = 0
+	$form | Add-Member -NotePropertyName current_top -NotePropertyValue 0
 	$form
 }
 
@@ -299,9 +302,9 @@ function add_control {
 		
         [switch]$anchored
     )
-	$global:actual_top += $(if ($global:actual_top -eq 0) {$global:padding.top} else {$view.top})
+	$form.current_top += $(if ($form.current_top -eq 0) {$global:padding.top} else {$view.top})
 	$control = New-Object System.Windows.Forms.$type -Property @{
-		Top = $global:actual_top
+		Top = $form.current_top
 		Name = "$type $name"
 	}
 	$control | ForEach-Object {
@@ -341,8 +344,8 @@ function add_control {
 		if ($anchored) {$_.Anchor = "Top, Left, Right, Bottom"}
 	}
 	$form.Controls.Add($control)
-	if ($view.bottom -ne $null) {$global:actual_top += $view.bottom}
-	$form.Height = $global:actual_top + $control.height + $global:padding.bottom
+	if ($view.bottom -ne $null) {$form.current_top += $view.bottom}
+	$form.Height = $form.current_top + $control.height + $global:padding.bottom
 	[System.Windows.Forms.Application]::DoEvents()
 	$control
 }
@@ -365,7 +368,7 @@ function replace_control {
 	$form.Controls[$control_name].Dispose()
 	$new_control = add_control $form $new_type $new_view -name $control_name.split(" ", 2)[-1]
 	$new_control.Top = $top
-	$global:actual_top -= $new_view.top
+	$form.current_top -= $new_view.top
 	$new_control
 }
 
@@ -389,7 +392,7 @@ function add_log_button {
 		$_.BringToFront()
 		$_.Add_Click({
 			$action_title = $this.Name.split(" ", 2)[-1]
-			make_form "$action_title - Log" $icon "1000, 500" "Sizable" | ForEach-Object {
+			make_form "$($action_title.substring(2)): Log" $icon "1000, 500" "Sizable" | ForEach-Object {
 				$_.MaximizeBox = $true
 				add_control $_ "textbox" $views.textarea -anchored | ForEach-Object {
 					$_.AppendText(($actions | Where-Object {$_.title -eq $action_title}).log)
