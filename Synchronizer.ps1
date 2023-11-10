@@ -10,7 +10,7 @@ $portablesPath = "$env:cr\Programs\Portables"
 
 $exitText = "${textPrefix}Running Beyond Compare"
 $exitRunPath = "$portablesPath\Beyond Compare (64-bit)\BCompare.exe"
-$exitRunArgument = "Venom"
+$exitRunArgument = "Unity"
 
 #--------------- Main Code ---------------
 
