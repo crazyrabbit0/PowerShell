@@ -2,7 +2,7 @@
 ####################  Variables  ####################
 
 $debug = 0
-$anydesk_folder = "$env:ProgramData\AnyDesk"
+$anydesk_folders = @("$env:ProgramData\AnyDesk", "$env:AppData\AnyDesk")
 $file_to_rename = "service.conf"
 
 $textPrefix = " "
@@ -59,28 +59,31 @@ function main {
 			$y.base += $y.space
 		}
 		
-		$file_path = [PSCustomObject]@{
-			original = "$anydesk_folder\$file_to_rename"
-			backup = "$anydesk_folder\$file_to_rename.bak"
-		}
-		if ($debug) {Write-Output $file_path | Format-List}
-		
-		If (Test-Path -Path $file_path.backup -PathType Leaf) {
-			Write-Host ""
-			Write-Host "${textPrefix}Removing old backups..."
-			add_label $form "$($title.symbol)Removing old backups..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
-			Remove-Item -Path $file_path.backup -Force
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
-			$y.base += $y.space
-		}
-		
-		If (Test-Path -Path $file_path.original -PathType Leaf) {
-			Write-Host ""
-			Write-Host "${textPrefix}Making backup of affected files..."
-			add_label $form "$($title.symbol)Making backup of affected files..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
-			Rename-Item -Path $file_path.original -NewName $file_path.backup -Force
-			add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
-			$y.base += $y.space
+		ForEach ($anydesk_folder in $anydesk_folders)
+		{
+			$file_path = [PSCustomObject]@{
+				original = "$anydesk_folder\$file_to_rename"
+				backup = "$anydesk_folder\$file_to_rename.bak"
+			}
+			if ($debug) {Write-Output $file_path | Format-List}
+			
+			If (Test-Path -Path $file_path.backup -PathType Leaf) {
+				Write-Host ""
+				Write-Host "${textPrefix}Removing old backups..."
+				add_label $form "$($title.symbol)Removing old backups..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
+				Remove-Item -Path $file_path.backup -Force
+				add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
+				$y.base += $y.space
+			}
+			
+			If (Test-Path -Path $file_path.original -PathType Leaf) {
+				Write-Host ""
+				Write-Host "${textPrefix}Making backup of affected files..."
+				add_label $form "$($title.symbol)Making backup of affected files..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
+				Rename-Item -Path $file_path.original -NewName $file_path.backup -Force
+				add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
+				$y.base += $y.space
+			}
 		}
 		
 		Write-Host ""
