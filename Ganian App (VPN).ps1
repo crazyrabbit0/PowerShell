@@ -38,6 +38,7 @@ function main
 			}
 			"`n`t Installing Radmin VPN..."
 			Start-Process $radmin_download '/VERYSILENT /NORESTART' -Wait
+			Remove-Item $radmin_download
 		}
 		
 		if (Test-Path -Path $radmin_path)
