@@ -1,4 +1,4 @@
-Start-BitsTransfer -Source 'https://download.radmin-vpn.com/download/files/Radmin_VPN_1.4.4642.1.exe' -Destination "$env:TMP/radmin_vpn.exe"
+
 #-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
 $debug = 0
