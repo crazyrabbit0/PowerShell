@@ -3,7 +3,7 @@
 
 $debug = 0
 $has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-if (-not $has_admin_rights) {Start-Process -Verb "RunAs" -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}) -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
+if (-not $has_admin_rights) {Start-Process "powershell.exe" ("-NoProfile -ExecutionPolicy Bypass " + $(if (Test-Path $MyInvocation.MyCommand.Definition) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""})) -WorkingDirectory $pwd -Verb "RunAs" -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}); exit}
 
 #-----------------------------------------------------------Variables-----------------------------------------------------------#
 
@@ -29,13 +29,11 @@ function main
 		$radmin_path = "${env:ProgramFiles(x86)}\Radmin VPN\RvRvpnGui.exe"
 		if (-Not (Test-Path -Path $radmin_path))
 		{
-			if (-Not (Test-Path $radmin_download))
-			{
-				"`n`t Downloading Radmin VPN..."
-				$radmin_page = Invoke-RestMethod $radmin_url
-				$download_url = ($radmin_page | Select-String "<a href=""(.*?)"" class=""buttonDownload""").Matches.Groups[1].Value
-				wget $download_url -OutFile $radmin_download
-			}
+			"`n`t Downloading Radmin VPN..."
+			$radmin_page = Invoke-RestMethod $radmin_url
+			$download_url = ($radmin_page | Select-String "<a href=""(.*?)"" class=""buttonDownload""").Matches.Groups[1].Value
+			wget $download_url -OutFile $radmin_download
+			
 			"`n`t Installing Radmin VPN..."
 			Start-Process $radmin_download '/VERYSILENT /NORESTART' -Wait
 			Remove-Item $radmin_download
@@ -48,7 +46,7 @@ function main
 		}
 	}
 	
-	$domain_with_ip = "$vpn_ip`t$domain"
+	$domain_with_ip = "$vpn_ip   $domain"
 	$hosts	= "$env:WINDIR\System32\drivers\etc\hosts"
 	$hosts_contents = Get-Content $hosts
 	$made_changes = $FALSE
@@ -88,6 +86,8 @@ function showTitle
         [Parameter(Mandatory)]
         [string]$title
     )
+	
+	$Host.UI.RawUI.WindowTitle = $title
 	"`n====================  $title  ====================`n"
 }
 
