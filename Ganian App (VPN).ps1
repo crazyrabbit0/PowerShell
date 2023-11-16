@@ -2,9 +2,8 @@
 #-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
 $debug = 0
-$radmin = $TRUE
-$has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-if (-not $has_admin_rights) {Start-Process "powershell.exe" ("-NoProfile -ExecutionPolicy Bypass " + $(if (Test-Path $MyInvocation.MyCommand.Definition -EA 0) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""})) -WorkingDirectory $pwd -Verb "RunAs" -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}); exit}
+$has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+if (-Not $has_admin_rights) {Start-Process -FilePath 'powershell' -ArgumentList '-NoProfile -ExecutionPolicy Bypass', $(if (Test-Path $PSCommandPath -EA 0) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""}) -WorkingDirectory "$pwd" -Verb 'RunAs' -WindowStyle 'Normal'; if ($debug) {pause} exit}
 
 #-----------------------------------------------------------Variables-----------------------------------------------------------#
 
@@ -20,30 +19,27 @@ function main
 	
 	showTitle $title
 	
-	if ($radmin)
+	$radmin_url = 'https://www.radmin-vpn.com/'
+	$radmin_download = "$env:TMP/radmin_vpn.exe"
+	$radmin_title = 'Radmin VPN'
+	
+	$radmin_path = "${env:ProgramFiles(x86)}\Radmin VPN\RvRvpnGui.exe"
+	if (-Not (Test-Path -Path $radmin_path))
 	{
-		$radmin_url = 'https://www.radmin-vpn.com/'
-		$radmin_download = "$env:TMP/radmin_vpn.exe"
-		$radmin_title = 'Radmin VPN'
+		"`n`t Downloading Radmin VPN..."
+		$radmin_page = Invoke-RestMethod $radmin_url
+		$download_url = ($radmin_page | Select-String "<a href=""(.*?)"" class=""buttonDownload""").Matches.Groups[1].Value
+		wget $download_url -OutFile $radmin_download
 		
-		$radmin_path = "${env:ProgramFiles(x86)}\Radmin VPN\RvRvpnGui.exe"
-		if (-Not (Test-Path -Path $radmin_path))
-		{
-			"`n`t Downloading Radmin VPN..."
-			$radmin_page = Invoke-RestMethod $radmin_url
-			$download_url = ($radmin_page | Select-String "<a href=""(.*?)"" class=""buttonDownload""").Matches.Groups[1].Value
-			wget $download_url -OutFile $radmin_download
-			
-			"`n`t Installing Radmin VPN..."
-			Start-Process $radmin_download '/VERYSILENT /NORESTART' -Wait
-			Remove-Item $radmin_download
-		}
-		
-		if (Test-Path -Path $radmin_path)
-		{
-			"`n`t Starting Radmin VPN..."
-			Start-Process $radmin_path '/show'
-		}
+		"`n`t Installing Radmin VPN..."
+		Start-Process $radmin_download '/VERYSILENT /NORESTART' -Wait
+		Remove-Item $radmin_download
+	}
+	
+	if (Test-Path -Path $radmin_path)
+	{
+		"`n`t Starting Radmin VPN..."
+		Start-Process $radmin_path '/show'
 	}
 	
 	$domain_with_ip = "$vpn_ip   $domain"
@@ -75,7 +71,7 @@ function main
 	
 	Start-Process 'http://ganian'
 	
-	if ($debug) { "`n";pause }
+	if ($debug) {"`n"; pause}
 }
 
 #-----------------------------------------------------------Functions-----------------------------------------------------------#
