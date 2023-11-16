@@ -2,6 +2,7 @@
 #-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
 $debug = 0
+if (-Not $debug) {$ErrorActionPreference = "SilentlyContinue"}
 $has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
 if (-Not $has_admin_rights) {Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if (Test-Path $MyInvocation.MyCommand.Definition -EA 0) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""}) -WorkingDirectory "$pwd" -Verb 'RunAs' -WindowStyle 'Normal'; if ($debug) {pause} exit}
 
@@ -17,7 +18,7 @@ function main
 {
 	param ([String[]] $argz)
 	
-	showTitle $title
+	set_title $title
 	
 	"`n`n`t Αρχείο διευθύνσεων Windows:"
 	$hosts = @{
@@ -95,7 +96,7 @@ function main
 
 #-----------------------------------------------------------Functions-----------------------------------------------------------#
 
-function showTitle
+function set_title
 {
 	param (
         [Parameter(Mandatory)]
