@@ -2,13 +2,13 @@
 #-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
 $debug = 0
+$radmin = $TRUE
 $has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-if (-not $has_admin_rights) {Start-Process "powershell.exe" ("-NoProfile -ExecutionPolicy Bypass " + $(if (Test-Path $MyInvocation.MyCommand.Definition) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""})) -WorkingDirectory $pwd -Verb "RunAs" -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}); pause; exit}
+if (-not $has_admin_rights) {Start-Process "powershell.exe" ("-NoProfile -ExecutionPolicy Bypass " + $(if (Test-Path $MyInvocation.MyCommand.Definition -EA 0) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""})) -WorkingDirectory $pwd -Verb "RunAs" -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}); pause; exit}
 
 #-----------------------------------------------------------Variables-----------------------------------------------------------#
 
-$radmin = $TRUE
-$title	= (Get-Item $PSCommandPath).Basename
+$title	= 'Ganian App'
 $vpn_ip	= '26.235.25.211'
 $domain	= 'ganian'
 
