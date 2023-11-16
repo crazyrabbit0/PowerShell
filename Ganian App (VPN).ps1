@@ -31,24 +31,24 @@ function main
 	$domains_with_ip = $hosts.content -Match $domain -Match $vpn_ip
 	if ($domains_with_ip.count -eq 0)
 	{
-		Write-Host -NoNewLine -ForegroundColor Gray "`n`t • Προσθήκη νέας διεύθυνσης..."
+		list_item 'Προσθήκη νέας διεύθυνσης...'
 		$hosts.content += "`n$vpn_ip   $domain"
-		Write-Host -ForegroundColor Green ' √'
+		check_mark
 	}
 	
 	$domains_without_ip = $hosts.content -Match $domain -NotMatch $vpn_ip
 	if ($domains_without_ip.count -gt 0)
 	{
-		Write-Host -NoNewLine -ForegroundColor Gray "`n`t • Αφαίρεση παλαιών διευθύνσεων..."
+		list_item 'Αφαίρεση παλαιών διευθύνσεων...'
 		$hosts.content = $hosts.content -Replace ($domains_without_ip -join '|'), ''
-		Write-Host -ForegroundColor Green ' √'
+		check_mark
 	}
 	
 	if ($hosts.content -ne $hosts.old_content)
 	{
-		Write-Host -NoNewLine -ForegroundColor Gray "`n`t • Αποθήκευση..."
+		list_item 'Αποθήκευση...'
 		$hosts.content -join "`n" -replace '\n{3,}', "`n`n" | Out-File $hosts.path
-		Write-Host -ForegroundColor Green ' √'
+		check_mark
 	}
 	
 	"`n`n`n`t Εικονικό ιδιωτικό δίκτυο Radmin:"
@@ -60,32 +60,32 @@ function main
 	
 	if (-Not (Test-Path $radmin.path))
 	{
-		Write-Host -NoNewLin -ForegroundColor Graye "`n`t • Λήψη..."
+		list_item 'Λήψη...'
 		$radmin_page = Invoke-RestMethod $radmin.url
 		$download_url = ($radmin_page | Select-String "<a href=""(.*?)"" class=""buttonDownload""").Matches.Groups[1].Value
 		$ProgressPreference = "SilentlyContinue"
 		Start-BitsTransfer -Source $download_url -Destination $radmin.download -DisplayName 'Λήψη...'
-		Write-Host -ForegroundColor Green ' √'
+		check_mark
 		
-		Write-Host -NoNewLin -ForegroundColor Gray "`n`t • Εγκατάσταση..."
+		list_item 'Εγκατάσταση...'
 		Start-Process $radmin.download '/VERYSILENT /NORESTART' -Wait
-		Write-Host -ForegroundColor Green ' √'
+		check_mark
 		
-		Write-Host -NoNewLine -ForegroundColor Gray "`n`t • Αφαίρεση λήψης..."
+		list_item 'Διαγραφή λήψης...'
 		Remove-Item $radmin.download
-		Write-Host -ForegroundColor Green ' √'
+		check_mark
 	}
 	
 	if (Test-Path $radmin.path)
 	{
-		Write-Host -NoNewLine -ForegroundColor Gray "`n`t • Εκκίνηση..."
+		list_item 'Εκκίνηση...'
 		Start-Process $radmin.path '/show'
-		Write-Host -ForegroundColor Green ' √'
+		check_mark
 	}
 	
-	Write-Host -NoNewLine "`n`n`n`t Άνοιγμα πρoγράμματος περιήγησης..."
+	Write-Host -NoNewLine "`n`n`n`t Άνοιγμα πρoγράμματος περιήγησης... "
 	Start-Process "http://$domain"
-	Write-Host -ForegroundColor Green ' √'
+	check_mark
 	
 	"`n`n`n`t Η διαδικασία ολοκληρώθηκε!"
 	Write-Host -ForegroundColor Yellow "`n`t (Πατήστε οποιδήποτε πλήκτρο για να εξέλθετε)"
@@ -104,6 +104,27 @@ function showTitle
 	
 	$Host.UI.RawUI.WindowTitle = $title
 	"`n====================  $title  ===================="
+}
+
+function list_item
+{
+	param (
+        [Parameter(Mandatory)]
+        [string]$text,
+		
+        [string]$symbol = '•'
+    )
+	
+	Write-Host -NoNewLine -ForegroundColor Gray "`n`t $symbol $text "
+}
+
+function check_mark
+{
+	param (
+        [string]$symbol = '√'
+    )
+	
+	Write-Host -ForegroundColor Green $symbol
 }
 
 #-----------------------------------------------------------Run Main Code-----------------------------------------------------------#
