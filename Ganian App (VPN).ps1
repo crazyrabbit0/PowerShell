@@ -1,15 +1,15 @@
 
 #-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
-$debug = 0
+$debug = 1
 $has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
-if (-Not $has_admin_rights) {Start-Process -FilePath 'powershell' -ArgumentList '-NoProfile -ExecutionPolicy Bypass', $(if (Test-Path $PSCommandPath -EA 0) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""}) -WorkingDirectory "$pwd" -Verb 'RunAs' -WindowStyle 'Normal'; if ($debug) {pause} exit}
+if (-Not $has_admin_rights) {Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if (Test-Path $PSCommandPath -EA 0) {"-File `"$PSCommandPath`" $args"} else {"`"$($MyInvocation.MyCommand.Definition)`""}) -WorkingDirectory "$pwd" -Verb 'RunAs' -WindowStyle 'Normal'; if ($debug) {pause} exit}
 
 #-----------------------------------------------------------Variables-----------------------------------------------------------#
 
 $title	= 'Ganian App'
-$vpn_ip	= '26.235.25.211'
 $domain	= 'ganian'
+$vpn_ip	= '26.235.25.211'
 
 #-----------------------------------------------------------Main Code-----------------------------------------------------------#
 
@@ -19,59 +19,60 @@ function main
 	
 	showTitle $title
 	
-	$radmin_url = 'https://www.radmin-vpn.com/'
-	$radmin_download = "$env:TMP/radmin_vpn.exe"
-	$radmin_title = 'Radmin VPN'
+	$radmin = @{
+		path		= "${env:ProgramFiles(x86)}\Radmin VPN\RvRvpnGui.exe"
+		url			= 'https://www.radmin-vpn.com/'
+		download	= "$env:TMP/radmin_vpn.exe"
+	}
 	
-	$radmin_path = "${env:ProgramFiles(x86)}\Radmin VPN\RvRvpnGui.exe"
-	if (-Not (Test-Path -Path $radmin_path))
+	if (-Not (Test-Path $radmin.path))
 	{
 		"`n`t Downloading Radmin VPN..."
-		$radmin_page = Invoke-RestMethod $radmin_url
+		$radmin_page = Invoke-RestMethod $radmin.url
 		$download_url = ($radmin_page | Select-String "<a href=""(.*?)"" class=""buttonDownload""").Matches.Groups[1].Value
-		wget $download_url -OutFile $radmin_download
+		wget $download_url -OutFile $radmin.download
 		
 		"`n`t Installing Radmin VPN..."
-		Start-Process $radmin_download '/VERYSILENT /NORESTART' -Wait
-		Remove-Item $radmin_download
+		Start-Process $radmin.download '/VERYSILENT /NORESTART' -Wait
+		Remove-Item $radmin.download
 	}
 	
-	if (Test-Path -Path $radmin_path)
+	if (Test-Path $radmin.path)
 	{
 		"`n`t Starting Radmin VPN..."
-		Start-Process $radmin_path '/show'
+		Start-Process $radmin.path '/show'
 	}
 	
-	$domain_with_ip = "$vpn_ip   $domain"
-	$hosts	= "$env:WINDIR\System32\drivers\etc\hosts"
-	$hosts_contents = Get-Content $hosts
-	$made_changes = $FALSE
-	
-	$domains_without_ip = $hosts_contents -Match $domain
-	if ($domains_without_ip.count -gt 0)
-	{
-		"`n`t Removing old domains from Windows hosts..."
-		$hosts_contents = $hosts_contents -Replace ($domains_without_ip -join '|'), ''
-		$made_changes = $TRUE
+	$hosts = @{
+		path	= "$env:WINDIR\System32\drivers\etc\hosts"
 	}
+	$hosts.content = Get-Content $hosts.path
 	
-	$domains_with_ip = $hosts_contents -Match  $domain_with_ip
+	$domains_with_ip = $hosts.content -Match $domain -Match $vpn_ip
 	if ($domains_with_ip.count -eq 0)
 	{
 		"`n`t Adding domain to Windows hosts..."
-		$hosts_contents += $domain_with_ip
-		$made_changes = $TRUE
+		$hosts.content += "`n$vpn_ip   $domain"
 	}
 	
-	if ($made_changes)
+	$domains_without_ip = $hosts.content -Match $domain -NotMatch $vpn_ip
+	if ($domains_without_ip.count -gt 0)
+	{
+		"`n`t Removing old domains from Windows hosts..."
+		$hosts.content = $hosts.content -Replace ($domains_without_ip -join '|'), ''
+	}
+	
+	if ($hosts.content -ne (Get-Content $hosts.path))
 	{
 		"`n`t Saving Windows hosts..."
-		$hosts_contents -join "`n" -replace '\n{3,}', "`n`n" | Out-File $hosts
+		$hosts.content -join "`n" -replace '\n{3,}', "`n`n" | Out-File $hosts.path
 	}
 	
-	Start-Process 'http://ganian'
+	Start-Process "http://$domain"
 	
-	if ($debug) {"`n"; pause}
+	"`n`n"
+	if ($debug) {pause}
+	exit
 }
 
 #-----------------------------------------------------------Functions-----------------------------------------------------------#
