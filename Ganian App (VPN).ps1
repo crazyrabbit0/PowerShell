@@ -1,4 +1,4 @@
-
+Start-BitsTransfer -Source 'https://download.radmin-vpn.com/download/files/Radmin_VPN_1.4.4642.1.exe' -Destination "$env:TMP/radmin_vpn.exe"
 #-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
 $debug = 0
@@ -30,7 +30,7 @@ function main
 		"`n`t Downloading Radmin VPN..."
 		$radmin_page = Invoke-RestMethod $radmin.url
 		$download_url = ($radmin_page | Select-String "<a href=""(.*?)"" class=""buttonDownload""").Matches.Groups[1].Value
-		wget $download_url -OutFile $radmin.download
+		Start-BitsTransfer -Source $download_url -Destination $radmin.download -DisplayName 'Downloading Radmin VPN...'
 		
 		"`n`t Installing Radmin VPN..."
 		Start-Process $radmin.download '/VERYSILENT /NORESTART' -Wait
