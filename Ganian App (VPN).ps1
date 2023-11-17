@@ -24,9 +24,9 @@ function main
 		path		= "$env:WINDIR\System32\drivers\etc\hosts"
 		content		= $NULL
 		old_content	= $NULL
+		differences	= $NULL
 	}
-	$hosts.old_content	= Get-Content $hosts.path
-	$hosts.content		= $hosts.original_content
+	$hosts.content = $hosts.old_content = Get-Content $hosts.path
 	
 	$domains_with_ip = $hosts.content -Match $domain -Match $vpn_ip
 	if ($domains_with_ip.count -eq 0)
@@ -44,10 +44,11 @@ function main
 		check_mark
 	}
 	
-	if ($hosts.content -ne $hosts.old_content)
+	$hosts.differences = Compare-Object $hosts.content $hosts.old_content
+	if ($hosts.differences -ne $NULL)
 	{
 		list_item 'Αποθήκευση...'
-		$hosts.content -join "`n" -replace '\n{3,}', "`n`n" | Out-File $hosts.path
+		$hosts.content -join "`n" -replace '\n{3,}', "`n`n" | Out-File -Encoding ASCII $hosts.path
 		check_mark
 	}
 	
