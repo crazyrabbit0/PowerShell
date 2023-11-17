@@ -1,4 +1,5 @@
-﻿#-----------------------------------------------------------Administrator-----------------------------------------------------------#
+﻿
+#-----------------------------------------------------------Administrator-----------------------------------------------------------#
 
 $debug = 0
 $has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
