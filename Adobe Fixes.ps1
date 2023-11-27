@@ -1,11 +1,11 @@
 ﻿
-#-----------------------------------------------------------Administrator-----------------------------------------------------------#
+############################## Administrator ##############################
 
 $debug = 0
-$has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-if (-not $has_admin_rights) {Start-Process -Verb RunAs -WindowStyle $(if ($debug) {"Normal"} else {"Minimized"}) -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
+$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+if (-not $has_admin_rights) {Start-Process -Verb RunAs -WindowStyle $(if ($debug) {'Normal'} else {'Minimized'}) -FilePath 'powershell' -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
 
-#-----------------------------------------------------------Variables-----------------------------------------------------------#
+############################## Variables ##############################
 
 $scriptTitle = (Get-Item $PSCommandPath).Basename
 $icon = @{
@@ -46,89 +46,89 @@ $views = @{
 	title = @{
 		top = 30
 		left = 10
-		font = "Segoe UI, 13"
-		color = "Black"
+		font = 'Segoe UI, 13'
+		color = 'Black'
 	}
 	wait = @{
 		top = 30
 		left = 30
-		text = " Please wait..."
-		font = "Segoe UI Semibold, 10"
-		color = "RoyalBlue"
+		text = ' Please wait...'
+		font = 'Segoe UI Semibold, 10'
+		color = 'RoyalBlue'
 	}
 	success = @{
 		top = 30
 		left = 30
-		text = " Completed"
-		font = "Segoe UI Semibold, 10"
-		color = "DarkGreen"
+		text = ' Completed'
+		font = 'Segoe UI Semibold, 10'
+		color = 'DarkGreen'
 	}
 	fail = @{
 		top = 30
 		left = 30
-		text = " Aborted"
-		font = "Segoe UI Semibold, 10"
-		color = "Crimson"
+		text = ' Aborted'
+		font = 'Segoe UI Semibold, 10'
+		color = 'Crimson'
 	}
 	exit = @{
 		top = 30
 		left = 30
-		text = "You can close the window"
-		font = "Segoe UI Semibold, 10"
-		color = "RoyalBlue"
+		text = 'You can close the window'
+		font = 'Segoe UI Semibold, 10'
+		color = 'RoyalBlue'
 	}
 	select_all_button = @{
 		top = 30
 		left = 10
-		text = "[Select all]"
-		font = "Segoe UI Symbol, 10"
-		color = "RoyalBlue"
+		text = '[Select all]'
+		font = 'Segoe UI Symbol, 10'
+		color = 'RoyalBlue'
 	}
 	deselect_all_button = @{
 		top = 0
 		left = 175
-		text = "[Deselect all]"
-		font = "Segoe UI Symbol, 10"
-		color = "RoyalBlue"
+		text = '[Deselect all]'
+		font = 'Segoe UI Symbol, 10'
+		color = 'RoyalBlue'
 	}
 	ok_button = @{
 		top = 40
 		left = 10
-		width = "full"
+		width = 'full'
 		height = 30
-		text = ""
-		font = "Segoe UI Symbol, 13"
-		color = "White"
-		back = "DarkGreen"
+		text = ''
+		font = 'Segoe UI Symbol, 13'
+		color = 'White'
+		back = 'DarkGreen'
 	}
 	cancel_button = @{
 		top = 0
 		left = 140
-		text = ""
-		font = "Segoe UI Symbol, 13"
-		color = "White"
-		back = "Crimson"
+		text = ''
+		font = 'Segoe UI Symbol, 13'
+		color = 'White'
+		back = 'Crimson'
 	}
 	progressbar = @{
 		top = 30
 		left = 15
-		width = "full"
+		width = 'full'
 		height = 10
 	}
 }
 
 $actions = @(
 	@{
-		title = " Close All Adobe Apps"
+		title = ' Close All Adobe Apps'
 		checkbox = {}
 		code = {
-			Get-Process "Acrobat*" | Stop-Process -Force
-			Get-Process | Where-Object Company -Match ".*Adobe.*" | Stop-Process -Force
+			Get-Process 'Acrobat*' | Stop-Process -Force
+			Get-Process | Where-Object Company -Match '.*Adobe.*' | Stop-Process -Force
 		}
 		code_arguments = {}
 	},
 	@{
-		title = $(If ($adobe.sync.is_enabled) {" Block "} else {" Unblock "}) + "Adobe Sync Apps"
+		title = $(If ($adobe.sync.is_enabled) {' Block '} else {' Unblock '}) + 'Adobe Sync Apps'
 		checkbox = {}
 		code = {
 			If ($args.is_enabled) {
@@ -138,13 +138,13 @@ $actions = @(
 				}
 			}
 			else {
-				$args.apps | ForEach-Object {"$_.bak"} | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {$_.Name  -replace ".bak", ""}
+				$args.apps | ForEach-Object {"$_.bak"} | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {$_.Name  -replace '.bak', ''}
 			}
 		}
 		code_arguments = $adobe.sync
 	},
 	@{
-		title = $(If ($adobe.acrobat_update.is_enabled) {" Block "} else {" Unblock "}) + "Acrobat Updater"
+		title = $(If ($adobe.acrobat_update.is_enabled) {' Block '} else {' Unblock '}) + 'Acrobat Updater'
 		checkbox = {}
 		code = {
 			If ($args.is_enabled) {
@@ -154,46 +154,47 @@ $actions = @(
 				}
 			}
 			else {
-				$args.apps | ForEach-Object {"$_.bak"} | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {$_.Name  -replace ".bak", ""}
+				$args.apps | ForEach-Object {"$_.bak"} | Get-ChildItem -ErrorAction SilentlyContinue | Rename-Item -NewName {$_.Name  -replace '.bak', ''}
 			}
 		}
 		code_arguments = $adobe.acrobat_update
 	},
 	@{
-		title = " Clean Adobe System Library"
+		title = ' Clean Adobe System Library'
 		checkbox = {}
 		code = {Remove-Item -Path ($args | ForEach-Object {"$_\*"}) -Force -ErrorAction SilentlyContinue}
 		code_arguments = $adobe.system_library_folders
 	}
 )
 
-#-----------------------------------------------------------Main Code-----------------------------------------------------------#
+############################## Main Code ##############################
 
-function main {
-	param ([String[]] $argz)
+function main
+{
+	param ([string[]] $argz)
 	
 	if (-not $debug) {hide_powershell}
 	
 	Write-Host "`n===============  $scriptTitle  ===============`n"
 	$form = make_form $scriptTitle $icon "280, 0"
-	$select_all_button = add_control $form "button" $views.select_all_button
-	$select_all_button.Add_Click({$actions | ForEach-Object {$_.checkbox.checked = $true}})
-	$deselect_all_button = add_control $form "button" $views.deselect_all_button
-	$deselect_all_button.Add_Click({$actions | ForEach-Object {$_.checkbox.checked = $false}})
-	$actions | ForEach-Object {$_.checkbox = add_control $form "checkbox" $views.title $_.title}
-	$ok_button = add_control $form "button" $views.ok_button
-	$ok_button.Add_Click({if ($actions | Where-Object {$_.checkbox.checked}) {$form.DialogResult = "Ok"}})
-	#$cancel_button = add_control $form "button" $views.cancel_button
+	$select_all_button = add_control $form 'button' $views.select_all_button
+	$select_all_button.Add_Click({$actions | ForEach-Object {$_.checkbox.checked = $TRUE}})
+	$deselect_all_button = add_control $form 'button' $views.deselect_all_button
+	$deselect_all_button.Add_Click({$actions | ForEach-Object {$_.checkbox.checked = $FALSE}})
+	$actions | ForEach-Object {$_.checkbox = add_control $form 'checkbox' $views.title $_.title}
+	$ok_button = add_control $form 'button' $views.ok_button
+	$ok_button.Add_Click({if ($actions | Where-Object {$_.checkbox.checked}) {$form.DialogResult = 'OK'}})
+	#$cancel_button = add_control $form 'button' $views.cancel_button
 	#$cancel_button.DialogResult = "Cancel"
 	$form.Add_KeyDown({if ($_.KeyCode -eq "Enter") {$ok_button.PerformClick()}})
 	$form_result = $form.ShowDialog()
 	
-	if ($form_result -eq "Cancel") {exit}
+	if ($form_result -eq 'Cancel') {exit}
 	
 	$form = make_form $scriptTitle $icon
 	$actions | ForEach-Object {if ($_.checkbox.Checked) {
-		$null = add_control $form "label" $views.title $_.title
-		$null = add_control $form "label" $views.wait -name $_.title
+		$NULL = add_control $form 'label' $views.title $_.title
+		$NULL = add_control $form 'label' $views.wait -name $_.title
 	}}
 	$form.Add_Shown({
 		$actions | ForEach-Object {if ($_.checkbox.Checked) {run_action $form $views $_}}
@@ -202,11 +203,11 @@ function main {
 	$form.ShowDialog()
 }
 
-#-----------------------------------------------------------Functions-----------------------------------------------------------#
+############################## Functions ##############################
 
 function hide_powershell {
 	param (
-		[bool]$hide = $true
+		[bool]$hide = $TRUE
 	)
 	if (-not (Test-Path variable:global:console_handle)) {$global:console_handle = (get-process -id $pid).mainWindowHandle}
 	Add-Type -Name user32 -NameSpace win32 -MemberDefinition '
@@ -234,7 +235,7 @@ function make_form {
 		BackColor = $back_color
 		StartPosition = "CenterScreen"
 		FormBorderStyle = 1	# Not resizable
-		KeyPreview = $true
+		KeyPreview = $TRUE
 	}
 	$form.Add_KeyDown({
         if ($_.KeyCode -eq "Escape") {$form.close()}
@@ -271,7 +272,7 @@ function add_control {
 			$_.Text = $text
 			$_.Font = $view.font
 			$_.ForeColor = $view.color
-			$_.UseCompatibleTextRendering = $true
+			$_.UseCompatibleTextRendering = $TRUE
 		}
 		if ($type -in @("checkbox", "button")) {
 			$_.Cursor = "Hand"
@@ -284,8 +285,8 @@ function add_control {
 			$_.Style = "Marquee"
 			$_.MarqueeAnimationSpeed = 20
 		}
-		if ($view.back -ne $null) {$_.BackColor = $view.back}
-		if ($view.height -eq $null -and $view.width -eq $null) {$control.AutoSize = $true}
+		if ($view.back -ne $NULL) {$_.BackColor = $view.back}
+		if ($view.height -eq $NULL -and $view.width -eq $NULL) {$control.AutoSize = $TRUE}
 		else {
 			$_.height = $view.height
 			if ($view.width -eq "full") {$_.width = $form.width - $view.left * 2 - 18}
@@ -293,7 +294,7 @@ function add_control {
 		}
 	}
 	$form.Controls.Add($control)
-	if ($view.bottom -ne $null) {$global:actual_top += $view.bottom}
+	if ($view.bottom -ne $NULL) {$global:actual_top += $view.bottom}
 	$form.Height = $global:actual_top + $control.height + $global:padding.bottom
 	[System.Windows.Forms.Application]::DoEvents()
 	$control
@@ -353,9 +354,9 @@ function finish {
         [string]$text = " Process Finished"
     )
 	Write-Host "`n`n===============  $text  ===============`n"
-	add_control $form "label" $views.title "$text"
+	add_control $form 'label' $views.title "$text"
 	Write-Host "`n --- $($views.exit.text) ---" -ForegroundColor "DarkCyan"
-	add_control $form "label" $views.exit
+	add_control $form 'label' $views.exit
 }
 
 function set_form_icon {
@@ -385,7 +386,7 @@ function set_form_icon {
 			}
 		}
 	' -ReferencedAssemblies System.Drawing
-	$form.Icon = [System.IconExtractor]::Extract($icon.file, $icon.index, $true)
+	$form.Icon = [System.IconExtractor]::Extract($icon.file, $icon.index, $TRUE)
 }
 
 function set_form_app_id{
@@ -473,6 +474,6 @@ function set_form_app_id{
 	[PSAppID]::SetAppIdForWindow($form.Handle, $app_id)
 }
 
-#-----------------------------------------------------------Run Main Code-----------------------------------------------------------#
+############################## Run Main Code ##############################
 
 main $args

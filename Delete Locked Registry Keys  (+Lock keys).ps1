@@ -1,105 +1,93 @@
 
-#-----------------------------------------------------------Runs as Admin-----------------------------------------------------------#
+############################## Runs as Admin ##############################
 
-$has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-if (-not $has_admin_rights) {Start-Process -Verb "RunAs" -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
+$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+if (-not $has_admin_rights) {Start-Process -Verb 'RunAs' -FilePath 'powershell' -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
 
-#-----------------------------------------------------------Variables-----------------------------------------------------------#
+############################## Variables ##############################
 
-#	Override Exceptions
-$ErrorActionPreference = "SilentlyContinue"
-#	Registry Root Path without Base  (Default: SOFTWARE\Classes\WOW6432Node\CLSID)
-$keysPath = "SOFTWARE\Classes\WOW6432Node\CLSID\.Test"
 
-#-----------------------------------------------------------Main Code-----------------------------------------------------------#
+$ErrorActionPreference = 'SilentlyContinue'		# Override Exceptions
+$keysPath = 'SOFTWARE\Classes\WOW6432Node\CLSID\.Test'	# Registry Root Path without Base  (Default: SOFTWARE\Classes\WOW6432Node\CLSID)
+
+############################## Main Code ##############################
 
 function main
 {
-	param ([String[]] $argz)
-	
+	param ([string[]] $argz)
 	
 	#	Find Readable (Unlocked) Registry Keys
 	$unlockedKeys = Get-ChildItem "HKCU:\$keysPath" -ErrorVariable Errors | Split-Path -Leaf
 	#	Find Uneadable (Locked) Registry Keys
 	$lockedKeys = $Errors.CategoryInfo.TargetName | Split-Path -Leaf
 	
-	
 	#	Unlock Registry Keys
-	ForEach ($keyName in $lockedKeys)
+	foreach ($keyName in $lockedKeys)
 	{
 		#	Print Registry Key
 		"HKEY_CURRENT_USER\$keysPath\$keyName"
 		#	Override Access to set User as Owner  (without Output)
 		Enable-Privilege SeTakeOwnershipPrivilege | Out-Null
 		#	Open Registry Key
-		$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("$keysPath\$keyName", "ReadWriteSubTree", "TakeOwnership")
-		
+		$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("$keysPath\$keyName", 'ReadWriteSubTree', 'TakeOwnership')
 		
 		#	Get blank ACL  (since you don't have ownership)
-		$acl = $key.GetAccessControl("None")
+		$acl = $key.GetAccessControl('None')
 		#	Set User as Owner
-		$acl.SetOwner([System.Security.Principal.NTAccount]"$env:userdomain\$env:username")
+		$acl.SetOwner([System.Security.Principal.NTAccount] "$env:userdomain\$env:username")
 		$key.SetAccessControl($acl)
-		
 		
 		#	Get actual ACL
 		$acl = $key.GetAccessControl()
 		#	Remove Permissions for Everyone & User
-		$acl.PurgeAccessRules([System.Security.Principal.NTAccount]"Everyone")
-		$acl.PurgeAccessRules([System.Security.Principal.NTAccount]"$env:userdomain\$env:username")
+		$acl.PurgeAccessRules([System.Security.Principal.NTAccount] 'Everyone')
+		$acl.PurgeAccessRules([System.Security.Principal.NTAccount] "$env:userdomain\$env:username")
 		#	Allow Full Control for User  (Unnecessary)
-		#$rule = New-Object System.Security.AccessControl.RegistryAccessRule ("$env:userdomain\$env:username","FullControl","ObjectInherit,ContainerInherit","None","Allow")
+		#$rule = New-Object System.Security.AccessControl.RegistryAccessRule ("$env:userdomain\$env:username", 'FullControl', 'ObjectInherit, ContainerInherit', 'None', 'Allow')
 		#$acl.SetAccessRule($rule)
 		#	Enable Inheritance
-		$acl.SetAccessRuleProtection($false, $true)
+		$acl.SetAccessRuleProtection($FALSE, $TRUE)
 		#	Apply ACL changes
 		$key.SetAccessControl($acl)
-		
 		
 		#	Close Registry Key
 		$key.Close()
 	}
 	
-	
 	#	Delete Registry Keys that are Empty  (without Subkeys and Values)
 	Get-ChildItem "HKCU:\$keysPath" | Where-Object {$_.SubKeyCount -eq 0 -and $_.ValueCount -eq 0} | Remove-Item
-	
 	
 	#	Wait for Enter
 	Pause
 	
-	
 	#	Lock Registry Keys
-	ForEach ($keyName in $unlockedKeys)
+	foreach ($keyName in $unlockedKeys)
 	{
 		#	Print Registry Key
 		"HKEY_CURRENT_USER\$keysPath\$keyName"
 		#	Override Access to set System as Owner  (without Output)
 		Enable-Privilege SeRestorePrivilege | Out-Null
 		#	Open Registry Key
-		$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("$keysPath\$keyName", "ReadWriteSubTree", "TakeOwnership")
-		
+		$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("$keysPath\$keyName", 'ReadWriteSubTree', 'TakeOwnership')
 		
 		#	Get ACL
 		$acl = $key.GetAccessControl()
 		#	Disable Inheritance
-		$acl.SetAccessRuleProtection($true, $false)
+		$acl.SetAccessRuleProtection($TRUE, $FALSE)
 		#	Set System as Owner
-		$acl.SetOwner([System.Security.Principal.NTAccount]"System")
+		$acl.SetOwner([System.Security.Principal.NTAccount] 'System')
 		#	Apply ACL changes
 		$key.SetAccessControl($acl)
-		
 		
 		#	Close Registry Key
 		$key.Close()
 	}
 	
-	
 	#	Wait for Enter
 	Pause
 }
 
-#-----------------------------------------------------------Functions-----------------------------------------------------------#
+############################## Functions ##############################
 
 #	Function to Enable Privileges  (Source: https://social.technet.microsoft.com/Forums/en-US/e718a560-2908-4b91-ad42-d392e7f8f1ad/take-ownership-of-a-registry-key-and-change-permissions)
 function Enable-Privilege
@@ -162,7 +150,7 @@ function Enable-Privilege
 			retVal = OpenProcessToken(hproc, TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, ref htok);
 			tp.Count = 1;
 			tp.Luid = 0;
-			if(disable)
+			if (disable)
 			{
 				tp.Attr = SE_PRIVILEGE_DISABLED;
 			}
@@ -182,6 +170,6 @@ function Enable-Privilege
 	$type[0]::EnablePrivilege($processHandle, $Privilege, $Disable)
 }
 
-#-----------------------------------------------------------Run Main Code-----------------------------------------------------------#
+############################## Run Main Code ##############################
 
 main $args

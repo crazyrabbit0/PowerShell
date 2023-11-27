@@ -1,104 +1,112 @@
 
-#--------------- Variables ---------------
+############################## Variables ##############################
 
 $debug = 0
-$textPrefix = " "
 $scriptTitle = (Get-Item $PSCommandPath).Basename
 $RegistryPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
 $EntryName = "AltTabSettings"
 $EntryValue = 1
 
-#--------------- Main Code ---------------
+############################## Main Code ##############################
 
-function main {
-	param ([String[]] $argz)
-    
+function main
+{
+	param ([string[]] $argz)
+	if ($debug) {$argz; ''}
+	
 	showTitle $scriptTitle
-    if($debug) { $argz }
-
-    
-    If (Get-ItemProperty -Path $RegistryPath -Name $EntryName -ErrorAction SilentlyContinue) {
-		showTitle "Resetting ""Alt + Tab"" to Default functionality"
+	
+	If (Get-ItemProperty -Path $RegistryPath -Name $EntryName -ErrorAction SilentlyContinue)
+	{
+		showTitle 'Resetting "Alt + Tab" to Default functionality'
 		Remove-ItemProperty -Path $RegistryPath -Name $EntryName
 	}
-	else {
-		showTitle "Setting ""Alt + Tab"" to Old functionality"
+	else
+	{
+		showTitle 'Setting "Alt + Tab" to Old functionality'
 		New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType DWORD -Force
 	}
 	
-	if($debug) { "";pause }
+	if ($debug) {''; pause}
 	restartPrompt
 }
 
-#--------------- Functions ---------------
+############################## Functions ##############################
 
-function showTitle {
+function showTitle
+{
 	param (
-        [Parameter(Mandatory)]
-        [string]$title
-    )
-	""
-	"===============  $title  ==============="
-	""
+		[Parameter(Mandatory)] [string] $title
+	)
+	
+	"`n===============  $title  ===============`n"
 }
 
-function wait {
+function wait
+{
 	param (
-        [ValidateNotNullOrEmpty()]
-        [int]$seconds = 3,
+		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Waiting"
-    )
-	Write-Host -NoNewLine "$text"
-	for($i=0; $i -le $seconds; $i++) {
+		[ValidateNotNullOrEmpty()] [string] $text = ' Waiting'
+	)
+	
+	Write-Host -NoNewLine $text
+	for ($i = 0; $i -le $seconds; $i++)
+	{
 		Start-Sleep 1
-		Write-Host -NoNewLine "."
+		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit {
+function quit
+{
 	param (
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Exiting",
+		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
-        [string]$runPath,
+		[string] $runPath,
 		
-        [string]$runArgument
-    )
-	""
+		[string] $runArgument
+	)
+	
+	''
 	wait -text $text
-	if($runPath -ne $null) {
+	if ($runPath -ne $NULL)
+	{
 		Start-Process $runPath $runArgument
 	}
-	""
+	''
 	exit
 }
 
-function restartPrompt {
+function restartPrompt
+{
 	param (
-        [ValidateNotNullOrEmpty()]
-        [string]$title = "Finish",
-		
-        [bool]$isQuiting = $true
-    )
+		[ValidateNotNullOrEmpty()] [string] $title = "Finish",
+
+		[bool] $isQuiting = $TRUE
+	)
+	
 	showTitle $title
+	
 	[system.media.systemsounds]::Beep.play()
 	#(New-Object -com SAPI.SpVoice).speak("Operation has finished")
-	"${textPrefix}Do you want to restart your computer?"
-	""
-	"${textPrefix} [Y] Yes (Recommended)    [N] No"
-	""
+	
+	" Do you want to restart your computer? `n"
+	"  [Y] Yes (Recommended)    [N] No `n"
 	do {
-		$userChoice = [console]::ReadKey().Key
-		Write-Host -NoNewLine "`r `r"
-	} until($userChoice -match '^[yn]$')
-	if($userChoice -eq 'y') {
-		quit "${textPrefix}Restarting" "Shutdown" "/R /T 0"
+		$user_choice = [console]::ReadKey($TRUE).Key
+	} until (@('Y', 'N') -contains $user_choice)
+	
+	if ($user_choice -eq 'Y')
+	{
+		quit ' Restarting' 'Shutdown' '/R /T 0'
 	}
-	if($isQuiting) { quit }
+	
+	if ($isQuiting) {
+		quit
+	}
 }
 
-#--------------- Run Main Code ---------------
+############################## Run Main Code ##############################
 
 main $args

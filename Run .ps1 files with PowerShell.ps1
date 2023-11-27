@@ -1,118 +1,117 @@
 
-#--------------- Variables ---------------
+############################## Variables ##############################
 
 $debug = 0
-$textPrefix = " "
 $scriptTitle = (Get-Item $PSCommandPath).Basename
 
-#--------------- Main Code ---------------
+############################## Main Code ##############################
 
-function main {
-	param ([String[]] $argz)
+function main
+{
+	param ([string[]] $argz)
 	
 	runWithAdminRights $argz
+	
 	showTitle $scriptTitle
 	
 	$powershellPath = '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"'
 	$powershellRun = "$powershellPath -File `"%1`" %*"
 	
-	$powershellReg = "Registry::HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1"
-	$powershellOpenWithReg = "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ps1"
+	$powershellReg = 'Registry::HKEY_CLASSES_ROOT\Microsoft.PowerShellScript.1'
+	$powershellOpenWithReg = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ps1'
 	
-	""
-	"${textPrefix}Set Execution Policy"
-	if(!$debug) { $ErrorActionPreference = 'SilentlyContinue' }
-	Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force > $null
+	"`n Set Execution Policy"
+	if (-Not $debug) {$ErrorActionPreference = 'SilentlyContinue'}
+	Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force > $NULL
 	# Default: "Restricted"
 	
-	""
-	"${textPrefix}Fix Run Command"
+	"`n Fix Run Command"
 	Set-Item "$powershellReg\Shell\Open\Command" -Value $powershellRun
 	# Default: "C:\Windows\System32\notepad.exe" "%1"
 	
-	""
-	"${textPrefix}Fix Icon"
+	"`n Fix Icon"
 	Set-Item "$powershellReg\DefaultIcon" -Value $powershellPath
 	# Default: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell_ise.exe",1
 	
-	""
-	"${textPrefix}Add Drag & Drop"
-	Remove-Item "$powershellReg\ShellEx" -Recurse > $null
-	New-Item "$powershellReg\ShellEx\DropHandler" -Force > $null
-	Set-Item "$powershellReg\ShellEx\DropHandler" -Value "{60254CA5-953B-11CF-8C96-00AA00B8708C}"
+	"`n Add Drag & Drop"
+	Remove-Item "$powershellReg\ShellEx" -Recurse > $NULL
+	New-Item "$powershellReg\ShellEx\DropHandler" -Force > $NULL
+	Set-Item "$powershellReg\ShellEx\DropHandler" -Value '{60254CA5-953B-11CF-8C96-00AA00B8708C}'
 	# Default: {86C86720-42A0-1069-A2E8-08002B30309D}
 	
-	""
-	"${textPrefix}Add Run as Administrator"
-	Remove-Item "$powershellReg\Shell\RunAs" -Recurse > $null
-	New-Item "$powershellReg\Shell\RunAs\Command" -Force > $null
-	New-ItemProperty "$powershellReg\Shell\RunAs" "HasLUAShield" > $null
+	"`n Add Run as Administrator"
+	Remove-Item "$powershellReg\Shell\RunAs" -Recurse > $NULL
+	New-Item "$powershellReg\Shell\RunAs\Command" -Force > $NULL
+	New-ItemProperty "$powershellReg\Shell\RunAs" 'HasLUAShield' > $NULL
 	Copy-Item "$powershellReg\Shell\Open\Command" "$powershellReg\Shell\RunAs"
 	
-	""
-	"${textPrefix}Remove Open With"
-	$RegKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($powershellOpenWithReg, $true)
-	$RegKey.DeleteSubKey('UserChoice', $true)
+	"`n Remove Open With"
+	$RegKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($powershellOpenWithReg, $TRUE)
+	$RegKey.DeleteSubKey('UserChoice', $TRUE)
 	$RegKey.Close()
 	
-	showTitle "Finish"
+	showTitle 'Finish'
 	quit
 }
 
-#--------------- Functions ---------------
+############################## Functions ##############################
 
-function runWithAdminRights {
-    param ([String[]] $argz)
-
-	if(!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+function runWithAdminRights
+{
+	param ([string[]] $argz)
+	
+	if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
+	{
 		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
 		exit
 	}
 }
 
-function showTitle {
+function showTitle
+{
 	param (
-        [Parameter(Mandatory)]
-        [string]$Title
-    )
-	""
-	"================ $Title ================"
-	""
+		[Parameter(Mandatory)] [string] $title
+	)
+	
+	"`n=============== $title ===============`n"
 }
 
-function wait {
+function wait
+{
 	param (
-        [ValidateNotNullOrEmpty()]
-        [int]$seconds = 3,
+		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Waiting"
-    )
-	Write-Host -NoNewLine "$text"
-	for($i=0; $i -le $seconds; $i++) {
+		[ValidateNotNullOrEmpty()] [string] $text = ' Waiting'
+	)
+	
+	Write-Host -NoNewLine $text
+	for ($i = 0; $i -le $seconds; $i++)
+	{
 		Start-Sleep 1
-		Write-Host -NoNewLine "."
+		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit {
+function quit
+{
 	param (
-        [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Exiting",
+		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
-        [string]$runPath,
+		[string] $runPath,
 		
-        [string]$runArgument
-    )
-	""
+		[string] $runArgument
+	)
+	
+	''
 	wait -text $text
-	if($runPath -ne $null) {
+	if ($runPath -ne $NULL)
+	{
 		Start-Process $runPath $runArgument
 	}
-	""
+	''
 	exit
 }
 
-#--------------- Run Main Code ---------------
+############################## Run Main Code ##############################
 
 main $args

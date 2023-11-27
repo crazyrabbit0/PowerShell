@@ -1,22 +1,23 @@
 
-#--------------- Variables ---------------
+############################## Variables ##############################
 
 $debug = 1
 $plugin_installer_path = "$env:CommonProgramFiles\Adobe\Adobe Desktop Common\RemoteComponents\UPI\UnifiedPluginInstallerAgent\UnifiedPluginInstallerAgent.exe"
 
-#--------------- Main Code ---------------
+############################## Main Code ##############################
 
-function main {
-	param ([String[]] $argz)
+function main
+{
+	param ([string[]] $argz)
+	if ($debug) {$argz; ''}
 	
-	if($debug) { $argz;"" }
-	if(Test-Path $plugin_installer_path -PathType Leaf) {
-		Start-Process -FilePath $plugin_installer_path "/install ""$($argz[0])""" -NoNewWindow
+	if (Test-Path $plugin_installer_path -PathType Leaf) {
+		Start-Process -FilePath $plugin_installer_path "/install `"$($argz[0])`"" -NoNewWindow
 		Start-Sleep 1
 	}
-	if($debug) { "";pause }
+	if ($debug) {''; pause}
 }
 
-#--------------- Run Main Code ---------------
+############################## Run Main Code ##############################
 
 main $args

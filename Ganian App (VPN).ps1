@@ -1,21 +1,21 @@
 ﻿
-#-----------------------------------------------------------Administrator-----------------------------------------------------------#
+############################## Administrator ##############################
 
 $debug = 0
-$has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
 if (-Not $has_admin_rights) {Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if (Test-Path $MyInvocation.MyCommand.Definition -EA 0) {"-File `"$PSCommandPath`" $args"} else {$MyInvocation.MyCommand.Definition -replace '"', "'"}) -WorkingDirectory "$pwd" -Verb 'RunAs' -WindowStyle 'Normal'; if ($debug) {pause} exit}
 
-#-----------------------------------------------------------Variables-----------------------------------------------------------#
+############################## Variables ##############################
 
 $title	= 'Ganian App'
 $domain	= 'ganian'
 $vpn_ip	= '26.235.25.211'
 
-#-----------------------------------------------------------Main Code-----------------------------------------------------------#
+############################## Main Code ##############################
 
 function main
 {
-	param ([String[]] $argz)
+	param ([string[]] $argz)
 	
 	set_title $title
 	
@@ -55,7 +55,7 @@ function main
 	"`n`n`n`t Εικονικό ιδιωτικό δίκτυο Radmin:"
 	$radmin = @{
 		path		= "${env:ProgramFiles(x86)}\Radmin VPN\RvRvpnGui.exe"
-		url			= 'https://www.radmin-vpn.com/'
+		url		= 'https://www.radmin-vpn.com/'
 		download	= "$env:TMP/radmin_vpn.exe"
 	}
 	
@@ -90,11 +90,11 @@ function main
 	
 	"`n`n`n`t Η διαδικασία ολοκληρώθηκε!"
 	Write-Host -ForegroundColor Yellow "`n`t (Πατήστε οποιδήποτε πλήκτρο για να εξέλθετε)"
-	$NULL = [console]::ReadKey($true).Key
+	$NULL = [console]::ReadKey($TRUE)
 	exit
 }
 
-#-----------------------------------------------------------Functions-----------------------------------------------------------#
+############################## Functions ##############################
 
 function set_title
 {
@@ -110,11 +110,10 @@ function set_title
 function list_item
 {
 	param (
-        [Parameter(Mandatory)]
-        [string]$text,
-		
-        [string]$symbol = '•'
-    )
+		[Parameter(Mandatory)] [string] $text,
+
+		[string] $symbol = '•'
+	)
 	
 	Write-Host -NoNewLine -ForegroundColor Gray "`n`t $symbol $text "
 }
@@ -122,12 +121,12 @@ function list_item
 function check_mark
 {
 	param (
-        [string]$symbol = '√'
-    )
+		[string] $symbol = '√'
+	)
 	
 	Write-Host -ForegroundColor Green $symbol
 }
 
-#-----------------------------------------------------------Run Main Code-----------------------------------------------------------#
+############################## Run Main Code ##############################
 
 main $args

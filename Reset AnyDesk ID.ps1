@@ -1,13 +1,13 @@
-﻿	
-####################  Variables  ####################
+﻿
+############################## Variables ##############################
 
-$debug = 0
+$debug		= 0
+$show		= 'Minimized'
+$script_title	= 'Reset AnyDesk ID'
+$icon_path 	= "$env:LocalAppData\Microsoft\Edge\User Data\Default\Edge Profile.ico"
+
 $anydesk_folders = @("$env:ProgramData\AnyDesk", "$env:AppData\AnyDesk")
 $file_to_rename = "service.conf"
-
-$textPrefix = " "
-$scriptTitle = (Get-Item $PSCommandPath).Basename
-$icon_path = "$env:LocalAppData\Microsoft\Edge\User Data\Default\Edge Profile.ico"
 
 $title = [PSCustomObject]@{
 	font = "Segoe UI, 13"
@@ -35,21 +35,23 @@ $y = [PSCustomObject]@{
 	added = 75
 }
 
-####################  Main Code  ####################
+############################## Main Code ##############################
 
-function main {
-	param ([String[]]$argz)
+function main
+{
+	param ([string[]] $argz)
 	
-	runWithAdminRights $argz $(if ($debug) {"Normal"} else {"Minimized"})
+	run_as_admin
+	
 	hide_window
 	if ($debug) {hide_window $false}
 	
-	showTitle $scriptTitle
-	$form = make_form $scriptTitle $icon_path
+	show_title $script_title $TRUE
+	$form = make_form $script_title $icon_path
 	$form.Add_Shown({
-		If (Get-Process "AnyDesk*") {
-			Write-Host ""
-			Write-Host "${textPrefix}Closing AnyDesk processes..."
+		If (Get-Process "AnyDesk*")
+		{
+			Write-Host "`n Closing AnyDesk processes..."
 			add_label $form "$($title.symbol)Closing AnyDesk processes..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 			Do {
 				Get-Process "AnyDesk*" | Stop-Process -Force
@@ -67,18 +69,20 @@ function main {
 			}
 			if ($debug) {Write-Output $file_path | Format-List}
 			
-			If (Test-Path -Path $file_path.backup -PathType Leaf) {
+			If (Test-Path -Path $file_path.backup -PathType Leaf)
+			{
 				Write-Host ""
-				Write-Host "${textPrefix}Removing old backups..."
+				Write-Host " Removing old backups..."
 				add_label $form "$($title.symbol)Removing old backups..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 				Remove-Item -Path $file_path.backup -Force
 				add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
 				$y.base += $y.space
 			}
 			
-			If (Test-Path -Path $file_path.original -PathType Leaf) {
+			If (Test-Path -Path $file_path.original -PathType Leaf)
+			{
 				Write-Host ""
-				Write-Host "${textPrefix}Making backup of affected files..."
+				Write-Host " Making backup of affected files..."
 				add_label $form "$($title.symbol)Making backup of affected files..." $title.x ($y.base += $title.y) $title.font $title.color $y.added
 				Rename-Item -Path $file_path.original -NewName $file_path.backup -Force
 				add_label $form "$($subtitle.symbol.success)Completed" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.success $y.added
@@ -86,38 +90,38 @@ function main {
 			}
 		}
 		
-		Write-Host ""
-		showTitle "Process Finished"
+		Write-Host ''
+		show_title 'Process Finished'
 		add_label $form "$($title.symbol)Process finished!" $title.x ($y.base += $title.y) $title.font $title.color $y.added
 		add_label $form "$($subtitle.symbol.exit)You can close the window" $subtitle.x ($y.base += $subtitle.y) $subtitle.font $subtitle.color.exit $y.added
-		if ($debug) {"";pause}
+		if ($debug) {''; pause}
 		#quit -form $form
 	})
 	$form.ShowDialog()
 }
 
-####################  Functions  ####################
+############################## Functions ##############################
 
-function runWithAdminRights {
-    param (
-		[String[]]$argz,
-		
-		[String]$window_style = "Normal"
-	)
-	if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-		Start-Process -Verb RunAs -WindowStyle $window_style -FilePath powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
-		exit
-	}
+function run_as_admin
+{
+	$has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+	if (-Not $has_admin_rights) {Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if (Test-Path $MyInvocation.MyCommand.Definition -EA 0) {"-File `"$PSCommandPath`" $args"} else {$MyInvocation.MyCommand.Definition -replace '"', "'"}) -WorkingDirectory "$pwd" -Verb 'RunAs' -WindowStyle $(if ($show) {$show} else {'Normal'}); if ($debug) {pause} exit}
 }
 
-function showTitle {
+function show_title
+{
 	param (
-        [Parameter(Mandatory)]
-        [string]$title
-    )
-	Write-Host ""
-	Write-Host "===============  $title  ==============="
-	Write-Host ""
+		[Parameter(Mandatory)]
+		[string]$title,
+		
+		[bool]$set_title = $FALSE
+	)
+	
+	if ($set_title)
+	{
+		$Host.UI.RawUI.WindowTitle = $title
+	}
+	"`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
 function wait {
@@ -126,7 +130,7 @@ function wait {
         [int]$seconds = 3,
 		
         [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Waiting"
+        [string]$text = " Waiting"
     )
 	Write-Host -NoNewLine "$text"
 	for($i=0; $i -le $seconds; $i++) {
@@ -138,7 +142,7 @@ function wait {
 function quit {
 	param (
         [ValidateNotNullOrEmpty()]
-        [string]$text = "${textPrefix}Exiting",
+        [string]$text = " Exiting",
 		
         [string]$runPath,
 		
@@ -227,6 +231,6 @@ function hide_window {
 	$null = [win32.user32]::ShowWindow($console_handle, $(if ($hide) {0} else {5}))
 }
 
-####################  Run Main Code  ####################
+############################## Run Main Code ##############################
 
 main $args

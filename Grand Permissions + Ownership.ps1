@@ -1,44 +1,52 @@
 
-#--------------- Variables ---------------
+############################## Variables ##############################
 
-$debug = 0
+$debug	= 0
+$show	= 'Normal'
+$title	= 'Grand Permissions + Ownership'
+
 $permissionsSource = "$env:appData"
 
-#--------------- Main Code ---------------
+############################## Main Code ##############################
 
-function main {
-	param ([String[]] $argz)
+function main
+{
+	param (
+		[String[]] $argz
+	)
 	
-	runWithAdminRights $argz
-	if($debug) { $argz;"" }
-	Foreach($arg in $argz) {
-		if(Test-Path $arg -PathType Leaf) {
-			if($debug) { Get-Acl $arg | format-list }
+	run_as_admin
+	
+	if ($debug) {$argz; ''}
+	Foreach ($arg in $argz)
+	{
+		if (Test-Path $arg -PathType Leaf)
+		{
+			if ($debug) {Get-Acl $arg | format-list}
 			Get-Acl $permissionsSource | Set-Acl $arg
-			if($debug) { Get-Acl $arg | format-list }
+			if ($debug) {Get-Acl $arg | format-list}
 		}
-		elseif(Test-Path $arg -PathType Container) {
-			Get-ChildItem $arg -Recurse -Force | Foreach {
-				if($debug) { Get-Acl $_.FullName | format-list }
+		elseif (Test-Path $arg -PathType Container)
+		{
+			Get-ChildItem $arg -Recurse -Force | Foreach
+			{
+				if ($debug) {Get-Acl $_.FullName | format-list}
 				Get-Acl $permissionsSource | Set-Acl $_.FullName
-				if($debug) { Get-Acl $_.FullName | format-list }
+				if ($debug) {Get-Acl $_.FullName | format-list}
 			}
 		}
 	}
-	if($debug) { "";pause }
+	if ($debug) {''; pause}
 }
 
-#--------------- Functions ---------------
+############################## Functions ##############################
 
-function runWithAdminRights {
-    param ([String[]] $argz)
-
-	if(!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
-		exit
-	}
+function run_as_admin
+{
+	$has_admin_rights = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+	if (-Not $has_admin_rights) {Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if (Test-Path $MyInvocation.MyCommand.Definition -EA 0) {"-File `"$PSCommandPath`" $args"} else {$MyInvocation.MyCommand.Definition -replace '"', "'"}) -WorkingDirectory "$pwd" -Verb 'RunAs' -WindowStyle $(if ($show) {$show} else {'Normal'}); if ($debug) {pause} exit}
 }
 
-#--------------- Run Main Code ---------------
+############################## Run Main Code ##############################
 
 main $args

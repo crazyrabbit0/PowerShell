@@ -1,27 +1,33 @@
 
-#--------------- Variables ---------------
+############################## Variables ##############################
 
 $debug = 0
 $destinationFolder = [Environment]::GetFolderPath("Desktop")
 
-#--------------- Main Code ---------------
+############################## Main Code ##############################
 
-function main {
-	param ([String[]] $argz)
+function main
+{
+	param ([string[]] $argz)
+	if ($debug) {$argz; ''}
 	
-	if($argz.count -eq 0) { $argz = @($PSCommandPath) }
-	if($debug) { $argz;"" }
-	Foreach($arg in $argz) {
-		if(Test-Path $arg -PathType Leaf) {
-			$destinationFile = $destinationFolder + "\" + (Get-Item $arg).Basename + ".lnk"
-			if($debug) { $destinationFile }
+	if ($argz.count -eq 0)
+	{
+		$argz = @($PSCommandPath)
+	}
+	foreach ($arg in $argz)
+	{
+		if (Test-Path $arg -PathType Leaf)
+		{
+			$destinationFile = "$destinationFolder\" + (Get-Item $arg).Basename + '.lnk'
+			if ($debug) {$destinationFile}
 			ps1Shortcut "$arg" "$destinationFile"
 		}
 	}
-	if($debug) { "";pause }
+	if ($debug) {''; pause}
 }
 
-#--------------- Functions ---------------
+############################## Functions ##############################
 
 function ps1Shortcut {
 	param (
@@ -37,6 +43,6 @@ function ps1Shortcut {
 	$Shortcut.Save()
 }
 
-#--------------- Run Main Code ---------------
+############################## Run Main Code ##############################
 
 main $args
