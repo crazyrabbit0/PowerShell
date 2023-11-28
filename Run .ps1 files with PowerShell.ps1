@@ -1,18 +1,17 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Run .ps1 files with PowerShell'
+$global:args = $args
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
+function main {
+	run_as_admin
 	
-	runWithAdminRights $argz
-	
-	showTitle $scriptTitle
+	showTitle $global:title
 	
 	$powershellPath = '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"'
 	$powershellRun = "$powershellPath -File `"%1`" %*"
@@ -21,7 +20,7 @@ function main
 	$powershellOpenWithReg = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ps1'
 	
 	"`n Set Execution Policy"
-	if (-Not $debug) {$ErrorActionPreference = 'SilentlyContinue'}
+	if (-Not $global:debug) { $ErrorActionPreference = 'SilentlyContinue' }
 	Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force > $NULL
 	# Default: "Restricted"
 	
@@ -54,21 +53,18 @@ function main
 	quit
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
-function runWithAdminRights
-{
-	param ([string[]] $argz)
-	
-	if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
-	{
-		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
+function run_as_admin {
+	$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+	if (-not $has_admin_rights) {
+		Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if ($NULL -ne $PSCommandPath) { "-File `"$PSCommandPath`" $global:args" } else { $MyInvocation.MyCommand.Definition -replace '"', "'" }) -WorkingDirectory $pwd -Verb 'RunAs' -WindowStyle $(if ($global:debug) { 'Normal' } else { $global:display })
+		if ($global:debug) { pause }
 		exit
 	}
 }
 
-function showTitle
-{
+function showTitle {
 	param (
 		[Parameter(Mandatory)] [string] $title
 	)
@@ -76,8 +72,7 @@ function showTitle
 	"`n=============== $title ===============`n"
 }
 
-function wait
-{
+function wait {
 	param (
 		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
@@ -85,15 +80,13 @@ function wait
 	)
 	
 	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++)
-	{
+	for ($i = 0; $i -le $seconds; $i++) {
 		Start-Sleep 1
 		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit
-{
+function quit {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
@@ -104,14 +97,13 @@ function quit
 	
 	''
 	wait -text $text
-	if ($runPath -ne $NULL)
-	{
+	if ($runPath -ne $NULL) {
 		Start-Process $runPath $runArgument
 	}
 	''
 	exit
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

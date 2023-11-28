@@ -1,9 +1,15 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Synchronizer'
+$global:args = $args
 
-if (-not (Test-Path env:cr)) {$env:cr = 'C:\CR'}
+############################## VARIABLES ##############################
+
+if (-not (Test-Path env:cr)) { $env:cr = 'C:\CR' }
+
 $setupsPath = "$env:cr\Programs\Setups"
 $portablesPath = "$env:cr\Programs\Portables"
 
@@ -11,22 +17,20 @@ $exitText = ' Running Beyond Compare'
 $exitRunPath = "$portablesPath\Beyond Compare (64-bit)\BCompare.exe"
 $exitRunArgument = 'Unity'
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
-	
-	showTitle $scriptTitle
+function main {
+	showTitle $global:title
+
 	" Are you sure you want to continue? `n"
 	"  [Enter] Continue  [Escape] Exit `n"
 	do {
 		$user_choice = [console]::ReadKey($TRUE).Key
-		if ($user_choice -eq "Escape") {exit}
+		if ($user_choice -eq "Escape") { exit }
 	} until ($user_choice -eq 'Enter')
 	
 	clear-host
-	showTitle $scriptTitle
+	showTitle $global:title
 	
 	syncFile `
 		'MEGAsync (64-bit)' `
@@ -74,10 +78,9 @@ function main
 	quit $exitText $exitRunPath $exitRunArgument
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
-function showTitle
-{
+function showTitle {
 	param (
 		[Parameter(Mandatory)] [string] $title
 	)
@@ -85,8 +88,7 @@ function showTitle
 	"`n=============== $title ===============`n"
 }
 
-function wait
-{
+function wait {
 	param (
 		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
@@ -94,15 +96,13 @@ function wait
 	)
 	
 	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++)
-	{
+	for ($i = 0; $i -le $seconds; $i++) {
 		Start-Sleep 1
 		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit
-{
+function quit {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
@@ -113,16 +113,14 @@ function quit
 	
 	''
 	wait -text $text
-	if ($runPath -ne $NULL)
-	{
+	if ($runPath -ne $NULL) {
 		Start-Process $runPath $runArgument
 	}
 	''
 	exit
 }
 
-function syncFile
-{
+function syncFile {
 	param (
 		[Parameter(Mandatory)] [string] $title,
 
@@ -131,15 +129,13 @@ function syncFile
 		[Parameter(Mandatory)] [string] $destinationPath
 	)
 	
-	if (Test-Path $sourcePath)
-	{
+	if (Test-Path $sourcePath) {
 		"`n $title"
 		Copy-Item $sourcePath $destinationPath
 	}
 }
 
-function syncFolder
-{
+function syncFolder {
 	param (
 		[Parameter(Mandatory)] [string] $title,
 
@@ -150,19 +146,16 @@ function syncFolder
 		[string[]] $subfoldersToDelete
 	)
 	
-	if (Test-Path $sourcePath)
-	{
+	if (Test-Path $sourcePath) {
 		"`n $title"
 		Robocopy $sourcePath $destinationPath /Mir > $NULL
-		if ($subfoldersToDelete -ne $NULL)
-		{
+		if ($subfoldersToDelete -ne $NULL) {
 			Get-ChildItem $destinationPath -Include $subfoldersToDelete -Recurse | Get-ChildItem | Remove-Item -Recurse > $NULL
 		}
 	}
 }
 
-function exportRegistry
-{
+function exportRegistry {
 	param (
 		[Parameter(Mandatory)] [string] $title,
 
@@ -171,13 +164,12 @@ function exportRegistry
 		[Parameter(Mandatory)] [string] $destinationFile
 	)
 	
-	if (Test-Path ($registryPath -Replace '^(.+?)\\', '$1:\'))
-	{
+	if (Test-Path ($registryPath -Replace '^(.+?)\\', '$1:\')) {
 		"`n $title"
 		Reg Export $registryPath $destinationFile /y > $NULL
 	}
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

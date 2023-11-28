@@ -1,12 +1,12 @@
 
-############################## Globals ##############################
+############################## GLOBALS ##############################
 
 $global:debug = 0
 $global:display = 'Normal'
 $global:title = 'AutoLogin Option'
 $global:args = $args
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
 function main {
 	run_as_admin
@@ -54,7 +54,7 @@ function main {
 	finish
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
 function run_as_admin {
 	$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
@@ -108,6 +108,6 @@ function finish {
 	exit
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
 main

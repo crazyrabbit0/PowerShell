@@ -1,42 +1,42 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Add to Startup'
+$global:args = $args
+
+############################## VARIABLES ##############################
+
 $RegistryPath = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
+function main {
+	if ($global:debug) { $global:args; '' }
+
+	showTitle $global:title
 	
-	showTitle $scriptTitle
-	if ($debug) {$argz; ''}
+	$EntryName = (Get-Item $global:args[0]).BaseName
+	$EntryValue = "`"$($global:args[0])`"" + ($global:args | Select-Object -Skip 1 | ForEach-Object { " `"$_`"" })
 	
-	$EntryName = (Get-Item $argz[0]).BaseName
-	$EntryValue = "`"$($argz[0])`"" + ($argz | Select -Skip 1 | ForEach-Object{ " `"$_`"" })
-	
-	If ((Get-Item $RegistryPath -ErrorAction Ignore).Property -contains $EntryName)
-	{
+	If ((Get-Item $RegistryPath -ErrorAction Ignore).Property -contains $EntryName) {
 		showTitle "Deleting Key: `"$EntryName`""
 		Remove-ItemProperty -Path $RegistryPath -Name $EntryName -Force
 	}
-	else
-	{
+	else {
 		showTitle "Creating Key: `"$EntryName`""
 		New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType String -Force
 	}
 	
-	if ($debug) {''; pause}
+	if ($global:debug) { ''; pause }
 	showTitle 'Finish'
 	quit
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
-function showTitle
-{
+function showTitle {
 	param (
 		[Parameter(Mandatory)] [string] $title
 	)
@@ -44,8 +44,7 @@ function showTitle
 	"`n===============  $title  ===============`n"
 }
 
-function wait
-{
+function wait {
 	param (
 		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
@@ -53,15 +52,13 @@ function wait
 	)
 	
 	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++)
-	{
+	for ($i = 0; $i -le $seconds; $i++) {
 		Start-Sleep 1
 		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit
-{
+function quit {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
@@ -72,14 +69,13 @@ function quit
 	
 	''
 	wait -text $text
-	if ($runPath -ne $NULL)
-	{
+	if ($runPath -ne $NULL) {
 		Start-Process $runPath $runArgument
 	}
 	''
 	exit
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

@@ -1,46 +1,42 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Clear KMS Hosts & Keys'
+$global:args = $args
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
+function main {
+	run_as_admin
 	
-	runWithAdminRights $argz
-	
-	showTitle $scriptTitle
+	showTitle $global:title
 	
 	showTitle 'Uninstalling Product Keys'
-	Cscript "$env:WinDir\System32\Slmgr.vbs" /upk
+	cscript "$env:WinDir\System32\Slmgr.vbs" /upk
 	
 	showTitle 'Removing Product Keys from Registry'
-	Cscript "$env:WinDir\System32\Slmgr.vbs" /cpky
+	cscript "$env:WinDir\System32\Slmgr.vbs" /cpky
 	
 	showTitle 'Removing KMS hosts from Registry'
-	Cscript "$env:WinDir\System32\Slmgr.vbs" /ckms
+	cscript "$env:WinDir\System32\Slmgr.vbs" /ckms
 	
 	restartPrompt
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
-function runWithAdminRights
-{
-	param ([string[]] $argz)
-	
-	if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
-	{
-		Start-Process -Verb RunAs powershell.exe "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $argz"
+function run_as_admin {
+	$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+	if (-not $has_admin_rights) {
+		Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if ($NULL -ne $PSCommandPath) { "-File `"$PSCommandPath`" $global:args" } else { $MyInvocation.MyCommand.Definition -replace '"', "'" }) -WorkingDirectory $pwd -Verb 'RunAs' -WindowStyle $(if ($global:debug) { 'Normal' } else { $global:display })
+		if ($global:debug) { pause }
 		exit
 	}
 }
 
-function showTitle
-{
+function showTitle {
 	param (
 		[Parameter(Mandatory)] [string] $title
 	)
@@ -48,8 +44,7 @@ function showTitle
 	"`n===============  $title  ===============`n"
 }
 
-function wait
-{
+function wait {
 	param (
 		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
@@ -57,15 +52,13 @@ function wait
 	)
 	
 	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++)
-	{
+	for ($i = 0; $i -le $seconds; $i++) {
 		Start-Sleep 1
 		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit
-{
+function quit {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
@@ -76,16 +69,14 @@ function quit
 	
 	''
 	wait -text $text
-	if ($runPath -ne $NULL)
-	{
+	if ($runPath -ne $NULL) {
 		Start-Process $runPath $runArgument
 	}
 	''
 	exit
 }
 
-function restartPrompt
-{
+function restartPrompt {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $title = "Finish",
 
@@ -103,8 +94,7 @@ function restartPrompt
 		$user_choice = [console]::ReadKey($TRUE).Key
 	} until (@('Y', 'N') -contains $user_choice)
 	
-	if ($user_choice -eq 'Y')
-	{
+	if ($user_choice -eq 'Y') {
 		quit ' Restarting' 'Shutdown' '/R /T 0'
 	}
 	
@@ -113,6 +103,6 @@ function restartPrompt
 	}
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

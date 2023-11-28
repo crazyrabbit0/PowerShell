@@ -1,29 +1,26 @@
 
-############################## Runs as Admin ##############################
+############################## GLOBALS ##############################
 
-$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
-if (-not $has_admin_rights) {Start-Process -Verb 'RunAs' -FilePath 'powershell' -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $args" -WorkingDirectory $pwd; exit}
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Delete Locked Registry Keys  (+Lock keys)'
+$global:args = $args
 
-############################## Variables ##############################
+############################## VARIABLES ##############################
 
-
-$ErrorActionPreference = 'SilentlyContinue'		# Override Exceptions
+$ErrorActionPreference = 'SilentlyContinue'	# Override Exceptions
 $keysPath = 'SOFTWARE\Classes\WOW6432Node\CLSID\.Test'	# Registry Root Path without Base  (Default: SOFTWARE\Classes\WOW6432Node\CLSID)
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
-	
+function main {
 	#	Find Readable (Unlocked) Registry Keys
 	$unlockedKeys = Get-ChildItem "HKCU:\$keysPath" -ErrorVariable Errors | Split-Path -Leaf
 	#	Find Uneadable (Locked) Registry Keys
 	$lockedKeys = $Errors.CategoryInfo.TargetName | Split-Path -Leaf
 	
 	#	Unlock Registry Keys
-	foreach ($keyName in $lockedKeys)
-	{
+	foreach ($keyName in $lockedKeys) {
 		#	Print Registry Key
 		"HKEY_CURRENT_USER\$keysPath\$keyName"
 		#	Override Access to set User as Owner  (without Output)
@@ -55,14 +52,13 @@ function main
 	}
 	
 	#	Delete Registry Keys that are Empty  (without Subkeys and Values)
-	Get-ChildItem "HKCU:\$keysPath" | Where-Object {$_.SubKeyCount -eq 0 -and $_.ValueCount -eq 0} | Remove-Item
+	Get-ChildItem "HKCU:\$keysPath" | Where-Object { $_.SubKeyCount -eq 0 -and $_.ValueCount -eq 0 } | Remove-Item
 	
 	#	Wait for Enter
 	Pause
 	
 	#	Lock Registry Keys
-	foreach ($keyName in $unlockedKeys)
-	{
+	foreach ($keyName in $unlockedKeys) {
 		#	Print Registry Key
 		"HKEY_CURRENT_USER\$keysPath\$keyName"
 		#	Override Access to set System as Owner  (without Output)
@@ -87,11 +83,10 @@ function main
 	Pause
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
 #	Function to Enable Privileges  (Source: https://social.technet.microsoft.com/Forums/en-US/e718a560-2908-4b91-ad42-d392e7f8f1ad/take-ownership-of-a-registry-key-and-change-permissions)
-function Enable-Privilege
-{
+function Enable-Privilege {
 	param(
 		## The privilege to adjust. This set is taken from
 		## http://msdn.microsoft.com/en-us/library/bb530716(VS.85).aspx
@@ -170,6 +165,6 @@ function Enable-Privilege
 	$type[0]::EnablePrivilege($processHandle, $Privilege, $Disable)
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

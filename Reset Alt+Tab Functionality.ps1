@@ -1,40 +1,40 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Reset Alt+Tab Functionality'
+$global:args = $args
+
+############################## VARIABLES ##############################
+
 $RegistryPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
 $EntryName = "AltTabSettings"
 $EntryValue = 1
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
-	if ($debug) {$argz; ''}
+function main {
+	if ($global:debug) { $global:args; '' }
 	
-	showTitle $scriptTitle
+	showTitle $global:title
 	
-	If (Get-ItemProperty -Path $RegistryPath -Name $EntryName -ErrorAction SilentlyContinue)
-	{
+	If (Get-ItemProperty -Path $RegistryPath -Name $EntryName -ErrorAction SilentlyContinue) {
 		showTitle 'Resetting "Alt + Tab" to Default functionality'
 		Remove-ItemProperty -Path $RegistryPath -Name $EntryName
 	}
-	else
-	{
+	else {
 		showTitle 'Setting "Alt + Tab" to Old functionality'
 		New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType DWORD -Force
 	}
 	
-	if ($debug) {''; pause}
+	if ($global:debug) { ''; pause }
 	restartPrompt
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
-function showTitle
-{
+function showTitle {
 	param (
 		[Parameter(Mandatory)] [string] $title
 	)
@@ -42,8 +42,7 @@ function showTitle
 	"`n===============  $title  ===============`n"
 }
 
-function wait
-{
+function wait {
 	param (
 		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
@@ -51,15 +50,13 @@ function wait
 	)
 	
 	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++)
-	{
+	for ($i = 0; $i -le $seconds; $i++) {
 		Start-Sleep 1
 		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit
-{
+function quit {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
@@ -70,16 +67,14 @@ function quit
 	
 	''
 	wait -text $text
-	if ($runPath -ne $NULL)
-	{
+	if ($runPath -ne $NULL) {
 		Start-Process $runPath $runArgument
 	}
 	''
 	exit
 }
 
-function restartPrompt
-{
+function restartPrompt {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $title = "Finish",
 
@@ -97,8 +92,7 @@ function restartPrompt
 		$user_choice = [console]::ReadKey($TRUE).Key
 	} until (@('Y', 'N') -contains $user_choice)
 	
-	if ($user_choice -eq 'Y')
-	{
+	if ($user_choice -eq 'Y') {
 		quit ' Restarting' 'Shutdown' '/R /T 0'
 	}
 	
@@ -107,6 +101,6 @@ function restartPrompt
 	}
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

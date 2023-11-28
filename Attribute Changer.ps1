@@ -1,51 +1,37 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Attribute Changer'
+$global:args = $args
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
+function main {
+	if ($global:debug) { $global:args; '' }
 	
-	if ($debug) {$argz; ''}
-	
-	foreach ($arg in $argz)
-	{
-		if (Test-Path $arg)
-		{
+	foreach ($arg in $global:args) {
+		if (Test-Path $arg) {
 			$file = Get-Item $arg -Force
-			if ($debug) {$file.Attributes}
-			if ($argz[0] -eq 'r')
-			{
-				if ($file.Attributes -match 'ReadOnly')
-				{
-					$file.Attributes = $file.Attributes -Replace '(, )?ReadOnly(, )?', ''
-				}
-				else
-				{
-					$file.Attributes = $file.Attributes -Replace '(.+)', '$1, ReadOnly'
-				}
+			if ($global:debug) { $file.Attributes }
+			
+			if ($global:args[0] -eq 'r') {
+				if ($file.Attributes -match 'ReadOnly') { $file.Attributes = $file.Attributes -Replace '(, )?ReadOnly(, )?', '' }
+				else { $file.Attributes = $file.Attributes -Replace '(.+)', '$1, ReadOnly' }
 			}
-			elseif ($argz[0] -eq 's')
-			{
-				if ($file.Attributes -match 'System')
-				{
-					$file.Attributes = $file.Attributes -Replace '(, )?Hidden(, )?System(, )?', ''
-				}
-				else
-				{
-					$file.Attributes = $file.Attributes -Replace '(.+)', '$1, Hidden, System'
-				}
+			elseif ($global:args[0] -eq 's') {
+				if ($file.Attributes -match 'System') { $file.Attributes = $file.Attributes -Replace '(, )?Hidden(, )?System(, )?', '' }
+				else { $file.Attributes = $file.Attributes -Replace '(.+)', '$1, Hidden, System' }
 			}
-			if ($debug) {$file.Attributes}
+
+			if ($global:debug) { $file.Attributes }
 		}
 	}
 	
-	if ($debug) {''; pause}
+	if ($global:debug) { ''; pause }
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

@@ -3,20 +3,28 @@
 
 $global:debug = 0
 $global:display = 'Normal'
-$global:title = 'Adobe Plugin Installer'
+$global:title = 'Clear Temp'
 $global:args = $args
 
 ############################## VARIABLES ##############################
 
-$plugin_installer_path = "$env:CommonProgramFiles\Adobe\Adobe Desktop Common\RemoteComponents\UPI\UnifiedPluginInstallerAgent\UnifiedPluginInstallerAgent.exe"
+$tmpFolder = "${PSScriptRoot}\tmp\"
 
 ############################## MAIN CODE ##############################
+
 function main {
 	if ($global:debug) { $global:args; '' }
 	
-	if (Test-Path $plugin_installer_path -PathType Leaf) {
-		Start-Process -FilePath $plugin_installer_path "/install `"$($global:args[0])`"" -NoNewWindow
-		Start-Sleep 1
+	if ($global:args.count -eq 0) {
+		$global:args = @($tmpFolder)
+	}
+	foreach ($arg in $global:args) {
+		if (Test-Path $arg -PathType 'Container') {
+			Get-ChildItem $arg -Recurse -Force | Where-Object { $_.LastWriteTime -lt (get-date).AddHours(-1) } | Foreach-Object {
+				if ($global:debug) { $_ | format-list }
+				Remove-Item $_.FullName -Force
+			}
+		}
 	}
 
 	if ($global:debug) { ''; pause }

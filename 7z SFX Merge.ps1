@@ -1,24 +1,24 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = '7z SFX Merge'
+$global:args = $args
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
-	if ($debug) {$argz; ''}
+function main {
+	if ($global:debug) { $global:args; '' }
 	
-	if (Test-Path $argz[0] -PathType Leaf)
-	{
-		$filePathWithoutExt = $argz[0] -Replace '(.+)[.].{2,4}?$', '$1'
-		if ($debug) {$filePathWithoutExt}
+	if (Test-Path $global:args[0] -PathType Leaf) {
+		$filePathWithoutExt = $global:args[0] -Replace '(.+)[.].{2,4}?$', '$1'
+		if ($global:debug) { $filePathWithoutExt }
 		cmd /c copy /b "$filePathWithoutExt.sfx" + "$filePathWithoutExt.txt" + "$filePathWithoutExt.7z" "$filePathWithoutExt.exe" > $NULL
 	}
-	if ($debug) {''; pause}
+	if ($global:debug) { ''; pause }
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

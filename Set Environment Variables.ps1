@@ -1,26 +1,27 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$scriptTitle = (Get-Item $PSCommandPath).Basename
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Set Environment Variables'
+$global:args = $args
+
+############################## VARIABLES ##############################
 
 $envVars = @(
-	@{name = 'CR';		shortcut = 'cr';	path = 'C:\CR'},
-	@{name = 'Send To';	shortcut = 's2';	path = 'shell:SendTo'},
-	@{name = 'Startup';	shortcut = 'su';	path = 'shell:Startup'},
-	@{name = 'Apps';	shortcut = 'ap';	path = 'shell:AppsFolder'}
+	@{name = 'CR'; 		shortcut = 'cr';	path = 'C:\CR' },
+	@{name = 'Send To';	shortcut = 's2';	path = 'shell:SendTo' },
+	@{name = 'Startup';	shortcut = 'su';	path = 'shell:Startup' },
+	@{name = 'Apps';	shortcut = 'ap';	path = 'shell:AppsFolder' }
 )
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
-	
-	showTitle($scriptTitle)
+function main {
+	showTitle($global:title)
 	
 	''
-	foreach ($envVar in $envVars)
-	{
+	foreach ($envVar in $envVars) {
 		" ($($envVar.shortcut)) $($envVar.name)"
 		[Environment]::SetEnvironmentVariable($envVar.shortcut, $envVar.path, [System.EnvironmentVariableTarget]::User)
 	}
@@ -30,10 +31,9 @@ function main
 	quit
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
-function showTitle
-{
+function showTitle {
 	param (
 		[Parameter(Mandatory)] [string] $title
 	)
@@ -41,8 +41,7 @@ function showTitle
 	"`n=============== $title ===============`n"
 }
 
-function wait
-{
+function wait {
 	param (
 		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
 		
@@ -50,15 +49,13 @@ function wait
 	)
 	
 	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++)
-	{
+	for ($i = 0; $i -le $seconds; $i++) {
 		Start-Sleep 1
 		Write-Host -NoNewLine '.'
 	}
 }
 
-function quit
-{
+function quit {
 	param (
 		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
 		
@@ -69,14 +66,13 @@ function quit
 	
 	''
 	wait -text $text
-	if ($runPath -ne $NULL)
-	{
+	if ($runPath -ne $NULL) {
 		Start-Process $runPath $runArgument
 	}
 	''
 	exit
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

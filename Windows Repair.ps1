@@ -1,12 +1,12 @@
 ﻿
-############################## Globals ##############################
+############################## GLOBALS ##############################
 
 $global:debug = 0
 $global:display = 'Minimized'
 $global:title = 'Windows Repair'
 $global:args = $args
 
-############################## Variables ##############################
+############################## VARIABLES ##############################
 
 $icon = @{
 	path  = "$env:SystemRoot\System32\imageres.dll"
@@ -202,7 +202,7 @@ $views = @{
 	}
 }
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
 function main {
 	run_as_admin
@@ -253,7 +253,7 @@ function main {
 	$form.ShowDialog()
 }
 
-############################## Functions ##############################
+############################## FUNCTIONS ##############################
 
 function run_as_admin {
 	$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
@@ -461,10 +461,10 @@ function finish {
 	)
 
 	Write-Host "`n`n===============  $text  ===============`n"
-	$finish_label = add_control $form 'label' $views.title $text
+	add_control $form 'label' $views.title $text	# finish_label
 
 	Write-Host "`n --- $($views.exit.text) ---" -ForegroundColor $views.exit.console_color
-	$exit_label = add_control $form 'label' $views.exit
+	add_control $form 'label' $views.exit	# exit_label
 
 	$restart_button = add_control $form 'button' $views.restart_button
 	$restart_button.Add_Click({
@@ -581,6 +581,6 @@ function set_form_app_id {
 	[PSAppID]::SetAppIdForWindow($form.Handle, $app_id)
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
 main

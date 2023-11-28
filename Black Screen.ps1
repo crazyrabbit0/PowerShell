@@ -1,22 +1,25 @@
 ﻿
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Black Screen'
+$global:args = $args
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
-	if ($debug) {$argz; ''}
+function main {
+	if ($global:debug) { $global:args; '' }
 	
-	Add-Type -AssemblyName System.Windows.Forms
 	Start-Process -FilePath 'X_80.contrast-white.png'
 	Start-Sleep 1
+	
+	Add-Type -AssemblyName 'System.Windows.Forms'
 	[System.Windows.Forms.SendKeys]::SendWait('{F11}')
-	if ($debug) {''; pause}
+	
+	if ($global:debug) { ''; pause }
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main

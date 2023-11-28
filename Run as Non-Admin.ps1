@@ -1,22 +1,22 @@
 
-############################## Variables ##############################
+############################## GLOBALS ##############################
 
-$debug = 0
+$global:debug = 0
+$global:display = 'Normal'
+$global:title = 'Run as Non-Admin'
+$global:args = $args
 
-############################## Main Code ##############################
+############################## MAIN CODE ##############################
 
-function main
-{
-	param ([string[]] $argz)
-	
-	if ($debug) {$argz; ''}
+function main {
+	if ($global:debug) { $global:args; '' }
 	
 	$Env:__COMPAT_LAYER = 'RunAsInvoker'
-	Start-Process ("`"$($argz[0])`"" + ($argz | Select -Skip 1 | ForEach-Object{ " `"$_`"" }))
+	Start-Process ("`"$($global:args[0])`"" + ($global:args | Select -Skip 1 | ForEach-Object { " `"$_`"" }))
 	
-	if ($debug) {''; pause}
+	if ($global:debug) { ''; pause }
 }
 
-############################## Run Main Code ##############################
+############################## RUN MAIN CODE ##############################
 
-main $args
+main
