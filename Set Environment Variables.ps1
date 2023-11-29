@@ -8,7 +8,7 @@ $global:args = $args
 
 ############################## VARIABLES ##############################
 
-$envVars = @(
+$environment_variables = @(
 	@{name = 'CR'; 		shortcut = 'cr';	path = 'C:\CR' },
 	@{name = 'Send To';	shortcut = 's2';	path = 'shell:SendTo' },
 	@{name = 'Startup';	shortcut = 'su';	path = 'shell:Startup' },
@@ -18,59 +18,64 @@ $envVars = @(
 ############################## MAIN CODE ##############################
 
 function main {
-	showTitle($global:title)
+	show_title $global:title
 	
-	''
-	foreach ($envVar in $envVars) {
-		" ($($envVar.shortcut)) $($envVar.name)"
-		[Environment]::SetEnvironmentVariable($envVar.shortcut, $envVar.path, [System.EnvironmentVariableTarget]::User)
+	$environment_variables | Foreach-Object {
+		Write-Host -NoNewLine "`n`n`t $($_.shortcut):`t$($_.name) "
+		[Environment]::SetEnvironmentVariable($_.shortcut, $_.path, [System.EnvironmentVariableTarget]::User)
+		check_mark
 	}
 	
-	''
-	showTitle 'Finish'
-	quit
+	finish
 }
 
 ############################## FUNCTIONS ##############################
 
-function showTitle {
+function show_title {
 	param (
-		[Parameter(Mandatory)] [string] $title
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	"`n=============== $title ===============`n"
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
-function wait {
+function finish {
 	param (
-		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
-		
-		[ValidateNotNullOrEmpty()] [string] $text = ' Waiting'
-	)
-	
-	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++) {
-		Start-Sleep 1
-		Write-Host -NoNewLine '.'
-	}
-}
-
-function quit {
-	param (
-		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
-		
-		[string] $runPath,
-		
-		[string] $runArgument
+		[string] $title = 'Process Finished',
+		[switch] $restart
 	)
 	
 	''
-	wait -text $text
-	if ($runPath -ne $NULL) {
-		Start-Process $runPath $runArgument
+	show_title $title
+	[system.media.systemsounds]::Beep.play()
+
+	if ($restart) {
+		Write-Host -ForegroundColor Yellow -NoNewline "`n`n`t`t Restarting is required, restart now? [y/n] "
+		do {
+			$user_choice = [console]::ReadKey($TRUE).Key
+		} until (@('Y', 'N') -contains $user_choice)
+
+		if ($user_choice -eq 'Y') {
+			Start-Process 'shutdown' '/t /t 0'
+		}
 	}
-	''
+	else {
+		Write-Host -ForegroundColor Yellow "`n`n`t`t`t    (Press any key to exit)"
+		$NULL = [Console]::ReadKey($TRUE)
+	}
+	
 	exit
+}
+
+function check_mark {
+	param (
+		[string] $symbol = 'v',
+		[string] $color = 'Green'
+	)
+	
+	Write-Host -ForegroundColor $color $symbol
 }
 
 ############################## RUN MAIN CODE ##############################

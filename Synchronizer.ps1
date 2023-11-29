@@ -13,160 +13,167 @@ if (-not (Test-Path env:cr)) { $env:cr = 'C:\CR' }
 $setupsPath = "$env:cr\Programs\Setups"
 $portablesPath = "$env:cr\Programs\Portables"
 
-$exitText = ' Running Beyond Compare'
-$exitRunPath = "$portablesPath\Beyond Compare (64-bit)\BCompare.exe"
-$exitRunArgument = 'Unity'
-
 ############################## MAIN CODE ##############################
 
 function main {
-	showTitle $global:title
+	show_title $global:title -set_title
 
-	" Are you sure you want to continue? `n"
-	"  [Enter] Continue  [Escape] Exit `n"
+	Write-Host -NoNewLine "`n`n   You are about to run the $global:title, do you want to continue? [y/n] "
 	do {
 		$user_choice = [console]::ReadKey($TRUE).Key
-		if ($user_choice -eq "Escape") { exit }
-	} until ($user_choice -eq 'Enter')
-	
-	clear-host
-	showTitle $global:title
-	
-	syncFile `
-		'MEGAsync (64-bit)' `
-		"$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg" `
-		"$setupsPath\MEGAsync (64-bit)\.MEGAsync Settings  -CR\MEGAsync.cfg"
-	
-	syncFile `
-		'AnyDesk' `
-		"$env:AppData\AnyDesk\user.conf" `
-		"$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
-	
-	syncFolder `
-		'Viber' `
-		"$env:AppData\ViberPC" `
-		"$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
-	
-	syncFolder `
-		'RustDesk' `
-		"$env:AppData\RustDesk\config" `
-		"$portablesPath\RustDesk\.RustDesk Settings  -CR\config"
-	
-	syncFolder `
-		'Chrome (64-bit)' `
-		"$env:LocalAppData\Google\Chrome\User Data" `
-		"$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data" `
-		'BrowserMetrics', 'Cache', 'Code Cache', 'GPUCache', 'CacheStorage', 'optimization_guide_prediction_model_downloads'
-	
-	exportRegistry `
-		'7-Zip (64-bit)' `
-		'HKCU\SOFTWARE\7-Zip' `
-		"$setupsPath\7-Zip (64-bit)\.7-Zip Settings  -CR.reg"
-	
-	exportRegistry `
-		'Internet Download Manager' `
-		'HKCU\SOFTWARE\DownloadManager' `
-		"$setupsPath\Internet Download Manager\.Internet Download Manager Settings  -CR.reg"
-	
-	exportRegistry `
-		'Cheat Engine' `
-		'HKCU\SOFTWARE\Cheat Engine' `
-		"$portablesPath\Cheat Engine\.Cheat Engine Settings  -CR.reg"
-	
+		if ($user_choice -eq 'N') { exit }
+	} until ($user_choice -eq 'Y')
 	''
-	showTitle 'Finish'
-	quit $exitText $exitRunPath $exitRunArgument
+	
+	sync @{
+		files = @(
+			@{
+				title	= 'MEGAsync (64-bit)'
+				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg"
+				backup	= "$setupsPath\MEGAsync (64-bit)\.MEGAsync Settings  -CR\MEGAsync.cfg"
+			},
+			@{
+				title	= 'AnyDesk'
+				path	= "$env:AppData\AnyDesk\user.conf"
+				backup	= "$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
+			}
+		)
+
+		folders = @(
+			@{
+				title	= 'Viber'
+				path	= "$env:AppData\ViberPC"
+				backup	= "$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
+			},
+			@{
+				title	= 'Chrome (64-bit)'
+				path	= "$env:LocalAppData\Google\Chrome\User Data"
+				backup	= "$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data"
+				exclude	= 'BrowserMetrics Cache "Code Cache" GPUCache CacheStorage optimization_guide_prediction_model_downloads'
+			}
+		)
+
+		registry = @(
+			@{
+				title	= '7-Zip (64-bit)'
+				path	= 'HKCU\SOFTWARE\7-Zip'
+				backup	= "$setupsPath\7-Zip (64-bit)\.7-Zip Settings  -CR.reg"
+			},
+			@{
+				title	= 'Internet Download Manager'
+				path	= 'HKCU\SOFTWARE\DownloadManager'
+				backup	= "$setupsPath\Internet Download Manager\.Internet Download Manager Settings  -CR.reg"
+			},
+			@{
+				title	= 'Cheat Engine'
+				path	= 'HKCU\SOFTWARE\Cheat Engine'
+				backup	= "$portablesPath\Cheat Engine\.Cheat Engine Settings  -CR.reg"
+			}
+		)
+	}
+
+	Write-Host -NoNewLine "`n`n`t Running Beyond Compare... "
+	Start-Process "$portablesPath\Beyond Compare (64-bit)\BCompare.exe" 'Unity'
+	check_mark
+	
+	finish
 }
 
 ############################## FUNCTIONS ##############################
 
-function showTitle {
+function show_title {
 	param (
-		[Parameter(Mandatory)] [string] $title
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	"`n=============== $title ===============`n"
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
-function wait {
+function finish {
 	param (
-		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
-		
-		[ValidateNotNullOrEmpty()] [string] $text = ' Waiting'
-	)
-	
-	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++) {
-		Start-Sleep 1
-		Write-Host -NoNewLine '.'
-	}
-}
-
-function quit {
-	param (
-		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
-		
-		[string] $runPath,
-		
-		[string] $runArgument
+		[string] $title = 'Process Finished',
+		[switch] $restart
 	)
 	
 	''
-	wait -text $text
-	if ($runPath -ne $NULL) {
-		Start-Process $runPath $runArgument
+	show_title $title
+	[system.media.systemsounds]::Beep.play()
+
+	if ($restart) {
+		Write-Host -ForegroundColor Yellow -NoNewline "`n`n`t`t Restarting is required, restart now? [y/n] "
+		do {
+			$user_choice = [console]::ReadKey($TRUE).Key
+		} until (@('Y', 'N') -contains $user_choice)
+
+		if ($user_choice -eq 'Y') {
+			Start-Process 'shutdown' '/t /t 0'
+		}
 	}
-	''
+	else {
+		Write-Host -ForegroundColor Yellow "`n`n`t`t`t    (Press any key to exit)"
+		$NULL = [Console]::ReadKey($TRUE)
+	}
+	
 	exit
 }
 
-function syncFile {
+function list_item {
 	param (
-		[Parameter(Mandatory)] [string] $title,
-
-		[Parameter(Mandatory)] [string] $sourcePath,
-
-		[Parameter(Mandatory)] [string] $destinationPath
+		[Parameter(Mandatory)] [string] $text,
+		[string] $symbol = '-'
 	)
 	
-	if (Test-Path $sourcePath) {
-		"`n $title"
-		Copy-Item $sourcePath $destinationPath
-	}
+	Write-Host -NoNewLine -ForegroundColor Gray "`n`t $symbol $text "
 }
 
-function syncFolder {
+function check_mark {
 	param (
-		[Parameter(Mandatory)] [string] $title,
-
-		[Parameter(Mandatory)] [string] $sourcePath,
-
-		[Parameter(Mandatory)] [string] $destinationPath,
-
-		[string[]] $subfoldersToDelete
+		[string] $symbol = 'v',
+		[string] $color = 'Green'
 	)
 	
-	if (Test-Path $sourcePath) {
-		"`n $title"
-		Robocopy $sourcePath $destinationPath /Mir > $NULL
-		if ($subfoldersToDelete -ne $NULL) {
-			Get-ChildItem $destinationPath -Include $subfoldersToDelete -Recurse | Get-ChildItem | Remove-Item -Recurse > $NULL
+	Write-Host -ForegroundColor $color $symbol
+}
+
+function sync {
+	param ([Parameter(Mandatory)] [System.Collections.Hashtable] $syncs)
+	
+	"`n`n`t Files:"
+	$syncs.files | ForEach-Object {
+		list_item $_.title
+		if (Test-Path $_.path -PathType 'Leaf') {
+			Copy-Item $_.path $_.backup
+			check_mark
+		}
+		else {
+			check_mark 'x' 'Red'
 		}
 	}
-}
 
-function exportRegistry {
-	param (
-		[Parameter(Mandatory)] [string] $title,
+	"`n`n`t Folders:"
+	$syncs.folders | ForEach-Object {
+		list_item $_.title
+		if (Test-Path $_.path -PathType 'Container') {
+			Start-Process 'robocopy' "`"$($_.path)`" `"$($_.backup)`" /MIR /XD $($_.exclude)" -WindowStyle 'Hidden' -Wait
+			check_mark
+		}
+		else {
+			check_mark 'x' 'Red'
+		}
+	}
 
-		[Parameter(Mandatory)] [string] $registryPath,
-
-		[Parameter(Mandatory)] [string] $destinationFile
-	)
-	
-	if (Test-Path ($registryPath -Replace '^(.+?)\\', '$1:\')) {
-		"`n $title"
-		Reg Export $registryPath $destinationFile /y > $NULL
+	"`n`n`t Registry:"
+	$syncs.registry | ForEach-Object {
+		list_item $_.title
+		if (Test-Path ($_.path -Replace '^(.+?)\\', '$1:\')) {
+			Start-Process 'reg' "export $($_.path) $($_.backup) /y" -WindowStyle 'Hidden' -Wait
+			check_mark
+		}
+		else {
+			check_mark 'x' 'Red'
+		}
 	}
 }
 

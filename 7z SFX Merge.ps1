@@ -16,7 +16,9 @@ function main {
 		if ($global:debug) { $filePathWithoutExt }
 		cmd /c copy /b "$filePathWithoutExt.sfx" + "$filePathWithoutExt.txt" + "$filePathWithoutExt.7z" "$filePathWithoutExt.exe" > $NULL
 	}
+	
 	if ($global:debug) { ''; pause }
+	exit
 }
 
 ############################## RUN MAIN CODE ##############################

@@ -55,7 +55,7 @@ function main {
 	Get-ChildItem "HKCU:\$keysPath" | Where-Object { $_.SubKeyCount -eq 0 -and $_.ValueCount -eq 0 } | Remove-Item
 	
 	#	Wait for Enter
-	Pause
+	pause
 	
 	#	Lock Registry Keys
 	foreach ($keyName in $unlockedKeys) {
@@ -80,7 +80,8 @@ function main {
 	}
 	
 	#	Wait for Enter
-	Pause
+	pause
+	exit
 }
 
 ############################## FUNCTIONS ##############################

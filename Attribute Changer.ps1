@@ -30,6 +30,7 @@ function main {
 	}
 	
 	if ($global:debug) { ''; pause }
+	exit
 }
 
 ############################## RUN MAIN CODE ##############################

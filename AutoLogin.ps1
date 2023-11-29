@@ -11,7 +11,7 @@ $global:args = $args
 function main {
 	run_as_admin
 
-	show_title $global:title -set_title $TRUE
+	show_title $global:title -set_title
 	
 	$registry = @{
 		key   = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device'
@@ -42,8 +42,7 @@ function main {
 		check_mark
 	
 		list_item 'Opening User Accounts...'
-		Start-Process 'netplwiz'
-		#Start-Process 'control' 'userpasswords2'	# Alternative
+		Start-Process 'netplwiz'	# Alternative: Start-Process 'control' 'userpasswords2'
 		check_mark
 	}
 	else {
@@ -67,24 +66,46 @@ function run_as_admin {
 
 function show_title {
 	param (
-		[Parameter(Mandatory)]
-		[string]$title,
-		
-		[bool]$set_title = $FALSE
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	if ($set_title) {
-		$Host.UI.RawUI.WindowTitle = $title
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+
+function finish {
+	param (
+		[string] $title = 'Process Finished',
+		[switch] $restart
+	)
+	
+	''
+	show_title $title
+	[system.media.systemsounds]::Beep.play()
+
+	if ($restart) {
+		Write-Host -ForegroundColor Yellow -NoNewline "`n`n`t`t Restarting is required, restart now? [y/n] "
+		do {
+			$user_choice = [console]::ReadKey($TRUE).Key
+		} until (@('Y', 'N') -contains $user_choice)
+
+		if ($user_choice -eq 'Y') {
+			Start-Process 'shutdown' '/t /t 0'
+		}
 	}
-	"`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	else {
+		Write-Host -ForegroundColor Yellow "`n`n`t`t`t    (Press any key to exit)"
+		$NULL = [Console]::ReadKey($TRUE)
+	}
+	
+	exit
 }
 
 function list_item {
 	param (
-		[Parameter(Mandatory)]
-		[string]$text,
-		
-		[string]$symbol = '-'
+		[Parameter(Mandatory)] [string] $text,
+		[string] $symbol = '-'
 	)
 	
 	Write-Host -NoNewLine -ForegroundColor Gray "`n`t $symbol $text "
@@ -92,20 +113,11 @@ function list_item {
 
 function check_mark {
 	param (
-		[string]$symbol = 'v',
-		
-		[string]$color = 'Green'
+		[string] $symbol = 'v',
+		[string] $color = 'Green'
 	)
 	
 	Write-Host -ForegroundColor $color $symbol
-}
-
-function finish {
-	''
-	show_title 'Process Finished'
-	Write-Host -ForegroundColor Yellow "`n`n`t`t`t    (Press any key to exit)"
-	$NULL = [Console]::ReadKey($TRUE)
-	exit
 }
 
 ############################## RUN MAIN CODE ##############################

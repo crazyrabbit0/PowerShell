@@ -11,18 +11,21 @@ $global:args = $args
 function main {
 	run_as_admin
 	
-	showTitle $global:title
+	show_title $global:title -set_title
 	
-	showTitle 'Uninstalling Product Keys'
+	Write-Host -NoNewLine "`n`n`t Uninstalling Product Keys... "
 	cscript "$env:WinDir\System32\Slmgr.vbs" /upk
+	check_mark
 	
-	showTitle 'Removing Product Keys from Registry'
+	Write-Host -NoNewLine "`n`n`t Removing Product Keys from Registry... "
 	cscript "$env:WinDir\System32\Slmgr.vbs" /cpky
+	check_mark
 	
-	showTitle 'Removing KMS hosts from Registry'
+	Write-Host -NoNewLine "`n`n`t Removing KMS hosts from Registry... "
 	cscript "$env:WinDir\System32\Slmgr.vbs" /ckms
+	check_mark
 	
-	restartPrompt
+	finish -restart
 }
 
 ############################## FUNCTIONS ##############################
@@ -36,71 +39,51 @@ function run_as_admin {
 	}
 }
 
-function showTitle {
+function show_title {
 	param (
-		[Parameter(Mandatory)] [string] $title
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	"`n===============  $title  ===============`n"
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
-function wait {
+function finish {
 	param (
-		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
-		
-		[ValidateNotNullOrEmpty()] [string] $text = ' Waiting'
+		[string] $title = 'Process Finished',
+		[switch] $restart
 	)
-	
-	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++) {
-		Start-Sleep 1
-		Write-Host -NoNewLine '.'
-	}
-}
 
-function quit {
-	param (
-		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
-		
-		[string] $runPath,
-		
-		[string] $runArgument
-	)
-	
 	''
-	wait -text $text
-	if ($runPath -ne $NULL) {
-		Start-Process $runPath $runArgument
+	show_title $title
+	[system.media.systemsounds]::Beep.play()
+
+	if ($restart) {
+		Write-Host -ForegroundColor Yellow -NoNewline "`n`n`t`t Restarting is required, restart now? [y/n] "
+		do {
+			$user_choice = [console]::ReadKey($TRUE).Key
+		} until (@('Y', 'N') -contains $user_choice)
+
+		if ($user_choice -eq 'Y') {
+			Start-Process 'shutdown' '/t /t 0'
+		}
 	}
-	''
+	else {
+		Write-Host -ForegroundColor Yellow "`n`n`t`t`t    (Press any key to exit)"
+		$NULL = [Console]::ReadKey($TRUE)
+	}
+	
 	exit
 }
 
-function restartPrompt {
+function check_mark {
 	param (
-		[ValidateNotNullOrEmpty()] [string] $title = "Finish",
-
-		[bool] $isQuiting = $TRUE
+		[string] $symbol = 'v',
+		[string] $color = 'Green'
 	)
 	
-	showTitle $title
-	
-	[system.media.systemsounds]::Beep.play()
-	#(New-Object -com SAPI.SpVoice).speak("Operation has finished")
-	
-	" Do you want to restart your computer? `n"
-	"  [Y] Yes (Recommended)    [N] No `n"
-	do {
-		$user_choice = [console]::ReadKey($TRUE).Key
-	} until (@('Y', 'N') -contains $user_choice)
-	
-	if ($user_choice -eq 'Y') {
-		quit ' Restarting' 'Shutdown' '/R /T 0'
-	}
-	
-	if ($isQuiting) {
-		quit
-	}
+	Write-Host -ForegroundColor $color $symbol
 }
 
 ############################## RUN MAIN CODE ##############################

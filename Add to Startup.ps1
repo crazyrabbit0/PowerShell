@@ -15,65 +15,81 @@ $RegistryPath = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'
 function main {
 	if ($global:debug) { $global:args; '' }
 
-	showTitle $global:title
+	show_title $global:title -set_title
 	
 	$EntryName = (Get-Item $global:args[0]).BaseName
 	$EntryValue = "`"$($global:args[0])`"" + ($global:args | Select-Object -Skip 1 | ForEach-Object { " `"$_`"" })
 	
-	If ((Get-Item $RegistryPath -ErrorAction Ignore).Property -contains $EntryName) {
-		showTitle "Deleting Key: `"$EntryName`""
+	If ((Get-Item $RegistryPath -ErrorAction 'Ignore').Property -contains $EntryName) {
+		Write-Host -NoNewLine "`n`n`t`t`t Removing `"$EntryName`" from Starup... "
 		Remove-ItemProperty -Path $RegistryPath -Name $EntryName -Force
+		check_mark
 	}
 	else {
-		showTitle "Creating Key: `"$EntryName`""
-		New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType String -Force
+		Write-Host -NoNewLine "`n`n`t`t`t Addind `"$EntryName`" to Starup... "
+		$NULL = New-ItemProperty -Path $RegistryPath -Name $EntryName -Value $EntryValue -PropertyType 'String' -Force
+		check_mark
 	}
 	
-	if ($global:debug) { ''; pause }
-	showTitle 'Finish'
-	quit
+	finish
 }
 
 ############################## FUNCTIONS ##############################
 
-function showTitle {
+function show_title {
 	param (
-		[Parameter(Mandatory)] [string] $title
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	"`n===============  $title  ===============`n"
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
-function wait {
+function finish {
 	param (
-		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
-		
-		[ValidateNotNullOrEmpty()] [string] $text = ' Waiting'
-	)
-	
-	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++) {
-		Start-Sleep 1
-		Write-Host -NoNewLine '.'
-	}
-}
-
-function quit {
-	param (
-		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
-		
-		[string] $runPath,
-		
-		[string] $runArgument
+		[string] $title = 'Process Finished',
+		[switch] $restart
 	)
 	
 	''
-	wait -text $text
-	if ($runPath -ne $NULL) {
-		Start-Process $runPath $runArgument
+	show_title $title
+	[system.media.systemsounds]::Beep.play()
+
+	if ($restart) {
+		Write-Host -ForegroundColor Yellow -NoNewline "`n`n`t`t Restarting is required, restart now? [y/n] "
+		do {
+			$user_choice = [console]::ReadKey($TRUE).Key
+		} until (@('Y', 'N') -contains $user_choice)
+
+		if ($user_choice -eq 'Y') {
+			Start-Process 'shutdown' '/t /t 0'
+		}
 	}
-	''
+	else {
+		Write-Host -ForegroundColor Yellow "`n`n`t`t`t    (Press any key to exit)"
+		$NULL = [Console]::ReadKey($TRUE)
+	}
+	
 	exit
+}
+
+function list_item {
+	param (
+		[Parameter(Mandatory)] [string] $text,
+		[string] $symbol = '-'
+	)
+	
+	Write-Host -NoNewLine -ForegroundColor Gray "`n`t $symbol $text "
+}
+
+function check_mark {
+	param (
+		[string] $symbol = 'v',
+		[string] $color = 'Green'
+	)
+	
+	Write-Host -ForegroundColor $color $symbol
 }
 
 ############################## RUN MAIN CODE ##############################

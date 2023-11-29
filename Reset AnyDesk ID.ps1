@@ -46,7 +46,7 @@ function main {
 	
 	if (-not $global:debug) { hide_window }
 	
-	show_title $global:title $TRUE
+	show_title $global:title -set_title
 	$form = make_form $global:title $icon_path
 	$form.Add_Shown({
 			If (Get-Process 'AnyDesk*') {
@@ -116,16 +116,12 @@ function run_as_admin {
 
 function show_title {
 	param (
-		[Parameter(Mandatory)]
-		[string]$title,
-		
-		[bool]$set_title = $FALSE
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	if ($set_title) {
-		$Host.UI.RawUI.WindowTitle = $title
-	}
-	"`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
 function wait {
@@ -156,9 +152,9 @@ function quit {
 	)
 	Write-Host ""
 	wait -text $text
-	if ($runPath -ne $null) { Start-Process $runPath $runArgument }
+	if ($runPath -ne $NULL) { Start-Process $runPath $runArgument }
 	Write-Host ""
-	if ($form -ne $null) { $form.Close() }
+	if ($NULL -ne $form) { $form.Close() }
 	else { exit }
 }
 
@@ -213,8 +209,8 @@ function add_label {
 		Location                   = New-Object System.Drawing.Point($x, $y)
 		Font                       = $font
 		ForeColor                  = $text_color
-		AutoSize                   = $true
-		UseCompatibleTextRendering = $true
+		AutoSize                   = $TRUE
+		UseCompatibleTextRendering = $TRUE
 	}
 	$form.controls.Add($label)
 	$form.Height = $y + $added_height
@@ -224,7 +220,7 @@ function add_label {
 
 function hide_window {
 	param (
-		[bool]$hide = $true
+		[bool]$hide = $TRUE
 	)
 	if (-not ("win32.user32" -as [type])) { 
 		Add-Type -Name user32 -NameSpace win32 -MemberDefinition '
@@ -232,7 +228,7 @@ function hide_window {
 			public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
 		$global:console_handle = (get-process -id $pid).mainWindowHandle
 	}
-	$null = [win32.user32]::ShowWindow($console_handle, $(if ($hide) { 0 } else { 5 }))
+	$NULL = [win32.user32]::ShowWindow($console_handle, $(if ($hide) { 0 } else { 5 }))
 }
 
 ############################## RUN MAIN CODE ##############################

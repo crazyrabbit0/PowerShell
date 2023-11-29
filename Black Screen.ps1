@@ -18,6 +18,7 @@ function main {
 	[System.Windows.Forms.SendKeys]::SendWait('{F11}')
 	
 	if ($global:debug) { ''; pause }
+	exit
 }
 
 ############################## RUN MAIN CODE ##############################

@@ -57,7 +57,7 @@ function run_as_admin {
 }
 
 function oneInstanceMode {
-	$other_instances = Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -Like "*powershell.exe*""$PSCommandPath""*" }
+	$other_instances = Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -Like "*powershell.exe*`"$PSCommandPath`"*" }
 	$other_instances | Foreach-Object { Stop-Process -Id $_.ProcessId }
 }
 
@@ -66,7 +66,7 @@ function restartEveryHour {
 	$process_start_time = (Get-Process -id $PID).StartTime
 	$process_runs_less_than_an_hour = ($current_time - $process_start_time).TotalHours -lt 1
 	If ($process_runs_less_than_an_hour) { return }
-	Start-Process -Verb RunAs -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File ""$PSCommandPath"" $global:args"
+	Start-Process 'powershell' "-ExecutionPolicy Bypass -File `"$PSCommandPath`" $global:args" -Verb 'RunAs'
 	exit
 }
 

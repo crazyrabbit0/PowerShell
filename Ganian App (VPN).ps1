@@ -16,7 +16,7 @@ $vpn_ip	= '26.235.25.211'
 function main {
 	run_as_admin
 
-	set_title $global:title
+	show_title $global:title -set_title
 	
 	"`n`n`t Αρχείο διευθύνσεων Windows:"
 	$hosts = @{
@@ -82,10 +82,7 @@ function main {
 	Start-Process "http://$domain"
 	check_mark
 	
-	"`n`n`n`t Η διαδικασία ολοκληρώθηκε!"
-	Write-Host -ForegroundColor Yellow "`n`t (Πατήστε οποιδήποτε πλήκτρο για να εξέλθετε)"
-	$NULL = [console]::ReadKey($TRUE)
-	exit
+	finish_gr
 }
 
 ############################## FUNCTIONS ##############################
@@ -99,20 +96,19 @@ function run_as_admin {
 	}
 }
 
-function set_title {
+function show_title {
 	param (
-		[Parameter(Mandatory)]
-		[string]$title
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	$Host.UI.RawUI.WindowTitle = $title
-	"`n====================  $title  ===================="
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
 function list_item {
 	param (
 		[Parameter(Mandatory)] [string] $text,
-
 		[string] $symbol = '•'
 	)
 	
@@ -121,10 +117,38 @@ function list_item {
 
 function check_mark {
 	param (
-		[string] $symbol = '√'
+		[string] $symbol = '√',
+		[string] $color = 'Green'
 	)
 	
-	Write-Host -ForegroundColor Green $symbol
+	Write-Host -ForegroundColor $color $symbol
+}
+function finish_gr {
+	param (
+		[string] $title = 'Η διαδικασία ολοκληρώθηκε',
+		[switch] $restart
+	)
+	
+	''
+	show_title $title
+	[system.media.systemsounds]::Beep.play()
+
+	if ($restart) {
+		Write-Host -ForegroundColor Yellow -NoNewline "`n`n`t`t Απαιτείται επανεκκίνηση, επανεκκίνηση τώρα? [ν/ο] "
+		do {
+			$user_choice = [console]::ReadKey($TRUE).Key
+		} until (@('Ν', 'Ο') -contains $user_choice)
+
+		if ($user_choice -eq 'Ν') {
+			Start-Process 'shutdown' '/t /t 0'
+		}
+	}
+	else {
+		Write-Host -ForegroundColor Yellow "`n`n`t`t`t (Πατήστε οποιδήποτε πλήκτρο για να εξέλθετε)"
+		$NULL = [Console]::ReadKey($TRUE)
+	}
+	
+	exit
 }
 
 ############################## RUN MAIN CODE ##############################

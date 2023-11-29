@@ -3,7 +3,7 @@
 
 $global:debug = 0
 $global:display = 'Normal'
-$global:title = 'Convert Windows 10 Home to Pro'
+$global:title = 'Win 10 Home to Pro'
 $global:args = $args
 
 ############################## MAIN CODE ##############################
@@ -11,19 +11,21 @@ $global:args = $args
 function main {
 	run_as_admin
 	
-	showTitle $global:title
+	show_title $global:title -set_title
 	
-	"`n Starting License Manager"
-	Set-Service LicenseManager -StartupType Automatic -Status Running #-PassThru
+	Write-Host -NoNewLine "`n`n`t Starting License Manager... "
+	Set-Service 'LicenseManager' -StartupType 'Automatic' -Status 'Running' #-PassThru
+	check_mark
 	
-	"`n Starting Windows Update"
-	Set-Service wuauserv -StartupType Automatic -Status Running #-PassThru
+	Write-Host -NoNewLine "`n`n`t Starting Windows Update... "
+	Set-Service 'wuauserv' -StartupType 'Automatic' -Status 'Running' #-PassThru
+	check_mark
 	
-	"`n`n Updating Product Key"
-	Start-Process -Wait ChangePk "/ProductKey VK7JG-NPHTM-C97JM-9MPGT-3V66T"
+	Write-Host -NoNewLine "`n`n`t Updating Product Key... "
+	Start-Process 'ChangePk' '/ProductKey VK7JG-NPHTM-C97JM-9MPGT-3V66T' -Wait
+	check_mark
 	
-	''
-	restartPrompt
+	finish -restart
 }
 
 ############################## FUNCTIONS ##############################
@@ -37,71 +39,51 @@ function run_as_admin {
 	}
 }
 
-function showTitle {
+function show_title {
 	param (
-		[Parameter(Mandatory)] [string] $title
+		[Parameter(Mandatory)] [string] $title,
+		[switch] $set_title
 	)
 	
-	"`n===============  $title  ===============`n"
+	if ($set_title) { $Host.UI.RawUI.WindowTitle = $title }
+	Write-Host "`n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  $title  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 }
 
-function wait {
+function finish {
 	param (
-		[ValidateNotNullOrEmpty()] [int] $seconds = 3,
-		
-		[ValidateNotNullOrEmpty()] [string] $text = ' Waiting'
+		[string] $title = 'Process Finished',
+		[switch] $restart
 	)
-	
-	Write-Host -NoNewLine $text
-	for ($i = 0; $i -le $seconds; $i++) {
-		Start-Sleep 1
-		Write-Host -NoNewLine '.'
-	}
-}
 
-function quit {
-	param (
-		[ValidateNotNullOrEmpty()] [string] $text = ' Exiting',
-		
-		[string] $runPath,
-		
-		[string] $runArgument
-	)
-	
 	''
-	wait -text $text
-	if ($runPath -ne $NULL) {
-		Start-Process $runPath $runArgument
+	show_title $title
+	[system.media.systemsounds]::Beep.play()
+
+	if ($restart) {
+		Write-Host -ForegroundColor Yellow -NoNewline "`n`n`t`t Restarting is required, restart now? [y/n] "
+		do {
+			$user_choice = [console]::ReadKey($TRUE).Key
+		} until (@('Y', 'N') -contains $user_choice)
+
+		if ($user_choice -eq 'Y') {
+			Start-Process 'shutdown' '/t /t 0'
+		}
 	}
-	''
+	else {
+		Write-Host -ForegroundColor Yellow "`n`n`t`t`t    (Press any key to exit)"
+		$NULL = [Console]::ReadKey($TRUE)
+	}
+	
 	exit
 }
 
-function restartPrompt {
+function check_mark {
 	param (
-		[ValidateNotNullOrEmpty()] [string] $title = "Finish",
-
-		[bool] $isQuiting = $TRUE
+		[string] $symbol = 'v',
+		[string] $color = 'Green'
 	)
 	
-	showTitle $title
-	
-	[system.media.systemsounds]::Beep.play()
-	#(New-Object -com SAPI.SpVoice).speak("Operation has finished")
-	
-	" Do you want to restart your computer? `n"
-	"  [Y] Yes (Recommended)    [N] No `n"
-	do {
-		$user_choice = [console]::ReadKey($TRUE).Key
-	} until (@('Y', 'N') -contains $user_choice)
-	
-	if ($user_choice -eq 'Y') {
-		quit ' Restarting' 'Shutdown' '/R /T 0'
-	}
-	
-	if ($isQuiting) {
-		quit
-	}
+	Write-Host -ForegroundColor $color $symbol
 }
 
 ############################## RUN MAIN CODE ##############################
