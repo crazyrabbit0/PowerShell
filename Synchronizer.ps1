@@ -64,6 +64,11 @@ function main {
 				backup	= "$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
 			},
 			@{
+				title	= 'Mailspring'
+				path	= "$env:AppData\Mailspring"
+				backup	= "$setupsPath\Mailspring\.Mailspring Settings  -CR\Mailspring"
+			},
+			@{
 				title	= 'Chrome (64-bit)'
 				path	= "$env:LocalAppData\Google\Chrome\User Data"
 				backup	= "$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data"
