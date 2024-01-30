@@ -26,33 +26,6 @@ function main {
 	''
 	
 	sync @{
-		files = @(
-			@{
-				title	= 'MEGAsync (64-bit)'
-				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg"
-				backup	= "$setupsPath\MEGAsync (64-bit)\.MEGAsync Settings  -CR\MEGAsync.cfg"
-			},
-			@{
-				title	= 'AnyDesk'
-				path	= "$env:AppData\AnyDesk\user.conf"
-				backup	= "$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
-			}
-		)
-
-		folders = @(
-			@{
-				title	= 'Viber'
-				path	= "$env:AppData\ViberPC"
-				backup	= "$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
-			},
-			@{
-				title	= 'Chrome (64-bit)'
-				path	= "$env:LocalAppData\Google\Chrome\User Data"
-				backup	= "$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data"
-				exclude	= 'BrowserMetrics Cache "Code Cache" GPUCache CacheStorage optimization_guide_prediction_model_downloads'
-			}
-		)
-
 		registry = @(
 			@{
 				title	= '7-Zip (64-bit)'
@@ -70,8 +43,35 @@ function main {
 				backup	= "$portablesPath\Cheat Engine\.Cheat Engine Settings  -CR.reg"
 			}
 		)
+		
+		files = @(
+			@{
+				title	= 'MEGAsync (64-bit)'
+				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg"
+				backup	= "$setupsPath\MEGAsync (64-bit)\.MEGAsync Settings  -CR\MEGAsync.cfg"
+			},
+			@{
+				title	= 'AnyDesk'
+				path	= "$env:AppData\AnyDesk\user.conf"
+				backup	= "$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
+			}
+		)
+		
+		folders = @(
+			@{
+				title	= 'Viber'
+				path	= "$env:AppData\ViberPC"
+				backup	= "$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
+			},
+			@{
+				title	= 'Chrome (64-bit)'
+				path	= "$env:LocalAppData\Google\Chrome\User Data"
+				backup	= "$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data"
+				exclude	= 'BrowserMetrics Cache "Code Cache" GPUCache CacheStorage optimization_guide_prediction_model_downloads'
+			}
+		)
 	}
-
+	
 	Write-Host -NoNewLine "`n`n`t Running Beyond Compare... "
 	Start-Process "$portablesPath\Beyond Compare (64-bit)\BCompare.exe" 'Unity'
 	check_mark
@@ -140,6 +140,18 @@ function check_mark {
 function sync {
 	param ([Parameter(Mandatory)] [System.Collections.Hashtable] $syncs)
 	
+	"`n`n`t Registry:"
+	$syncs.registry | ForEach-Object {
+		list_item $_.title
+		if (Test-Path ($_.path -Replace '^(.+?)\\', '$1:\')) {
+			Start-Process 'reg' "export $($_.path) $($_.backup) /y" -WindowStyle 'Hidden' -Wait
+			check_mark
+		}
+		else {
+			check_mark 'x' 'Red'
+		}
+	}
+	
 	"`n`n`t Files:"
 	$syncs.files | ForEach-Object {
 		list_item $_.title
@@ -151,24 +163,12 @@ function sync {
 			check_mark 'x' 'Red'
 		}
 	}
-
+	
 	"`n`n`t Folders:"
 	$syncs.folders | ForEach-Object {
 		list_item $_.title
 		if (Test-Path $_.path -PathType 'Container') {
 			Start-Process 'robocopy' "`"$($_.path)`" `"$($_.backup)`" /MIR /XD $($_.exclude)" -WindowStyle 'Hidden' -Wait
-			check_mark
-		}
-		else {
-			check_mark 'x' 'Red'
-		}
-	}
-
-	"`n`n`t Registry:"
-	$syncs.registry | ForEach-Object {
-		list_item $_.title
-		if (Test-Path ($_.path -Replace '^(.+?)\\', '$1:\')) {
-			Start-Process 'reg' "export $($_.path) $($_.backup) /y" -WindowStyle 'Hidden' -Wait
 			check_mark
 		}
 		else {
