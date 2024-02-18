@@ -69,6 +69,11 @@ function main {
 				backup	= "$setupsPath\Mailspring\.Mailspring Settings  -CR\Mailspring"
 			},
 			@{
+				title	= 'GitHub Desktop'
+				path	= "$env:AppData\GitHub Desktop"
+				backup	= "$setupsPath\GitHub Desktop\.GitHub Desktop Settings  -CR\GitHub Desktop"
+			},
+			@{
 				title	= 'Chrome (64-bit)'
 				path	= "$env:LocalAppData\Google\Chrome\User Data"
 				backup	= "$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data"
