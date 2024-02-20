@@ -46,11 +46,6 @@ function main {
 		
 		files = @(
 			@{
-				title	= 'MEGAsync (64-bit)'
-				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg"
-				backup	= "$setupsPath\MEGAsync (64-bit)\.MEGAsync Settings  -CR\MEGAsync.cfg"
-			},
-			@{
 				title	= 'AnyDesk'
 				path	= "$env:AppData\AnyDesk\user.conf"
 				backup	= "$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
@@ -58,11 +53,6 @@ function main {
 		)
 		
 		folders = @(
-			@{
-				title	= 'Viber'
-				path	= "$env:AppData\ViberPC"
-				backup	= "$setupsPath\Viber\.Viber Settings  -CR\ViberPC"
-			},
 			@{
 				title	= 'Mailspring'
 				path	= "$env:AppData\Mailspring"
