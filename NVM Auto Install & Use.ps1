@@ -1,4 +1,4 @@
-######################################  README  ######################################
+########################################  README  ########################################
 #
 # 1. Execute the command below in PowerShell to enable running scripts on the system:
 #
@@ -9,6 +9,7 @@
 #
 #    "%UserProfile%/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"
 #
+##########################################################################################
 
 Function My-Cd {
     param (
@@ -39,10 +40,11 @@ Function My-Cd {
     $project = @{
         package     = 'package.json'
         nvmrc       = '.nvmrc'
-        isFound     = $null
-        version     = $null
-        isInstalled = $null
-        isCurrent   = $null
+        node        = @{
+            version     = $null
+            isInstalled = $null
+            isCurrent   = $null
+        }
     }
     
     # Check for NVM Installation
@@ -86,24 +88,24 @@ Function My-Cd {
     # If package.json exist: Set as Project's Node.js version
     if (Test-Path $project.package -PathType Leaf) {
         $packageNodeVersion = Select-String -Path $project.package -Pattern '"node":\s*"(.*?)[.x]*"'
-        $project.version = $(if ($packageNodeVersion) { 'v' + $packageNodeVersion.Matches.Groups[1].Value })
+        $project.node.version = $(if ($packageNodeVersion) { 'v' + $packageNodeVersion.Matches.Groups[1].Value })
     }
     # If package.json isn't found & .nvmrc exist: Set as Project's Node.js version
-    if (!$project.version -and (Test-Path $project.nvmrc -PathType Leaf)) {
-        $project.version = Get-Content $project.nvmrc -First 1
+    if (!$project.node.version -and (Test-Path $project.nvmrc -PathType Leaf)) {
+        $project.node.version = Get-Content $project.nvmrc -First 1
     }
     
     # If Project's Node.js version is set: Install/Use Project's Node.js version
-    if ($project.version) {
-        $project.isInstalled = ([array](Get-ChildItem $nvm.folder -Directory).Name -Match "^$($project.version)")[0]
-        if (-not $project.isInstalled) {
-            "Installing Node.js $($project.version)..."
-            Start-Process nvm "install $($project.version)" -WindowStyle Hidden -Wait
+    if ($project.node.version) {
+        $project.node.isInstalled = ([array](Get-ChildItem $nvm.folder -Directory).Name -Match "^$($project.node.version)")[0]
+        if (-not $project.node.isInstalled) {
+            "Installing Node.js $($project.node.version)..."
+            Start-Process nvm "install $($project.node.version)" -WindowStyle Hidden -Wait
         }
-        $project.isCurrent = $(if ($node.isPresent) { $node.current.Contains($project.version) })
-        if (-not $project.isCurrent) {
-            "Using Node.js $($project.version)..."
-            Start-Process nvm "use $($project.version)" -Verb RunAs -WindowStyle Hidden -Wait
+        $project.node.isCurrent = $(if ($node.isPresent) { $node.current.Contains($project.node.version) })
+        if (-not $project.node.isCurrent) {
+            "Using Node.js $($project.node.version)..."
+            Start-Process nvm "use $($project.node.version)" -Verb RunAs -WindowStyle Hidden -Wait
         }
     }
     # If Project's Node.js version isn't set: Install/Use Latest/Newest Node.js version
