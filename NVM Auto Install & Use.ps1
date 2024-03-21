@@ -85,13 +85,21 @@ Function My-Cd {
         }
     }
     
+    <# Removed package.json check
+    #
     # If package.json exist: Set as Project's Node.js version
     if (Test-Path $project.package -PathType Leaf) {
         $packageNodeVersion = Select-String -Path $project.package -Pattern '"node":\s*"(.*?)[.x]*"'
         $project.node.version = $(if ($packageNodeVersion) { 'v' + $packageNodeVersion.Matches.Groups[1].Value })
     }
-    # If package.json isn't found & .nvmrc exist: Set as Project's Node.js version
+    # If package.json isn't found & .nvmrc exists: Set as Project's Node.js version
     if (!$project.node.version -and (Test-Path $project.nvmrc -PathType Leaf)) {
+        $project.node.version = Get-Content $project.nvmrc -First 1
+    }
+    #>
+    
+    # If.nvmrc exists: Set as Project's Node.js version
+    if (Test-Path $project.nvmrc -PathType Leaf) {
         $project.node.version = Get-Content $project.nvmrc -First 1
     }
     
