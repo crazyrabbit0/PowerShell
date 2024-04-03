@@ -73,7 +73,7 @@ function main {
 	}
 	
 	Write-Host -NoNewLine "`n`n`t Running Beyond Compare... "
-	Start-Process "$portablesPath\Beyond Compare (64-bit)\BCompare.exe" 'Unity'
+	Start-Process "$portablesPath\Beyond Compare (64-bit)\BCompare.exe" 'Unique'
 	check_mark
 	
 	finish
@@ -144,7 +144,7 @@ function sync {
 	$syncs.registry | ForEach-Object {
 		list_item $_.title
 		if (Test-Path ($_.path -Replace '^(.+?)\\', '$1:\')) {
-			Start-Process 'reg' "export $($_.path) $($_.backup) /y" -WindowStyle 'Hidden' -Wait
+			Start-Process 'reg' "export ""$($_.path)"" ""$($_.backup)"" /y" -WindowStyle 'Hidden' -Wait
 			check_mark
 		}
 		else {
