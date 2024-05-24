@@ -1,4 +1,4 @@
-
+﻿
 ############################## GLOBALS ##############################
 
 $global:debug = 0
@@ -8,19 +8,24 @@ $global:args = $args
 
 ############################## VARIABLES ##############################
 
-$tmpFolder = "${PSScriptRoot}\tmp\"
+$folders = @(
+    "${PSScriptRoot}\tmp\",
+    "${PSScriptRoot}\temp\"
+)
+
+$daysOld = 3
 
 ############################## MAIN CODE ##############################
 
 function main {
 	if ($global:debug) { $global:args; '' }
-	
+
 	if ($global:args.count -eq 0) {
-		$global:args = @($tmpFolder)
+		$global:args = $folders
 	}
 	foreach ($arg in $global:args) {
 		if (Test-Path $arg -PathType 'Container') {
-			Get-ChildItem $arg -Recurse -Force | Where-Object { $_.LastWriteTime -lt (get-date).AddHours(-1) } | Foreach-Object {
+			Get-ChildItem $arg -Recurse -Force | Where-Object { $_.LastWriteTime -lt (get-date).AddDays(-$daysOld) } | Foreach-Object {
 				if ($global:debug) { $_ | format-list }
 				Remove-Item $_.FullName -Force
 			}
