@@ -13,7 +13,8 @@ $folders = @(
     "${PSScriptRoot}\temp\"
 )
 
-$daysOld = 3
+$daysToKeep = 1
+$filesToKeep = 0
 
 ############################## MAIN CODE ##############################
 
@@ -25,7 +26,7 @@ function main {
 	}
 	foreach ($arg in $global:args) {
 		if (Test-Path $arg -PathType 'Container') {
-			Get-ChildItem $arg -Recurse -Force | Where-Object { $_.LastWriteTime -lt (get-date).AddDays(-$daysOld) } | Foreach-Object {
+			Get-ChildItem $arg -Recurse -Force | Where-Object { $_.LastWriteTime -lt (get-date).AddDays(-$daysToKeep) } | Sort-Object -Property LastWriteTime | Select-Object -SkipLast $filesToKeep | Foreach-Object {
 				if ($global:debug) { $_ | format-list }
 				Remove-Item $_.FullName -Force
 			}
