@@ -19,7 +19,7 @@ function main {
 
 	Foreach ($arg in $global:args) {
 		if (Test-Path $arg -PathType Leaf) {
-			$base64 = [convert]::ToBase64String((get-content $arg -encoding byte))
+			$base64 = 'data:image;base64,' + [convert]::ToBase64String((get-content $arg -encoding byte))
             $base64 | Set-Clipboard
 			if ($global:debug) {
                 $arg
