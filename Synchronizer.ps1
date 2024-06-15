@@ -54,11 +54,6 @@ function main {
 		
 		folders = @(
 			@{
-				title	= 'Mailspring'
-				path	= "$env:AppData\Mailspring"
-				backup	= "$setupsPath\Mailspring\.Mailspring Settings  -CR\Mailspring"
-			},
-			@{
 				title	= 'GitHub Desktop'
 				path	= "$env:AppData\GitHub Desktop"
 				backup	= "$setupsPath\GitHub Desktop\.GitHub Desktop Settings  -CR\GitHub Desktop"
