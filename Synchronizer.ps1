@@ -63,6 +63,11 @@ function main {
 				path	= "$env:LocalAppData\Google\Chrome\User Data"
 				backup	= "$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data"
 				exclude	= 'BrowserMetrics Cache "Code Cache" GPUCache CacheStorage optimization_guide_prediction_model_downloads'
+			},
+			@{
+				title	= 'Thunderbird (64-bit)'
+				path	= "$env:AppData\Thunderbird\Profiles\ln02bahd.default-esr"
+				backup	= "$setupsPath\Thunderbird (64-bit)\.Thunderbird Settings  -CR\ln02bahd.default-esr"
 			}
 		)
 	}
