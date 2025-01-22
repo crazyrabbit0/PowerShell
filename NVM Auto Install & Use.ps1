@@ -98,7 +98,7 @@ Function My-Cd {
     }
     #>
     
-    # If.nvmrc exists: Set as Project's Node.js version
+    # If .nvmrc exists: Set as Project's Node.js version
     if (Test-Path $project.nvmrc -PathType Leaf) {
         $project.node.version = Get-Content $project.nvmrc -First 1
     }
@@ -116,6 +116,8 @@ Function My-Cd {
             Start-Process nvm "use $($project.node.version)" -Verb RunAs -WindowStyle Hidden -Wait
         }
     }
+    <# Skip when .nvmrc doesn't exist
+    #
     # If Project's Node.js version isn't set: Install/Use Latest/Newest Node.js version
     else {
         $node.newest = ([array](Get-ChildItem $nvm.folder -Directory).Name -Match '^v\d+')[-1]
@@ -130,6 +132,10 @@ Function My-Cd {
             Start-Process nvm 'use newest' -Verb RunAs -WindowStyle Hidden -Wait
         }
     }
+    #>
+    
+    # Refresh Path Environment Veriable
+    $env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')
     
     # Update Path Environment Veriable to match Current Node version
     $node.current   = (Get-Item $node.folder).target[0]
