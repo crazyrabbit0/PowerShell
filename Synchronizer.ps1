@@ -59,21 +59,21 @@ function main {
 				backup	= "$setupsPath\GitHub Desktop\.GitHub Desktop Settings  -CR\GitHub Desktop"
 			},
 			@{
-				title	= 'Chrome (64-bit)'
+				title	= 'Chrome'
 				path	= "$env:LocalAppData\Google\Chrome\User Data"
-				backup	= "$setupsPath\Chrome (64-bit)\.Chrome Settings  -CR\User Data"
+				backup	= "$setupsPath\Chrome\.Chrome Settings  -CR\User Data"
 				exclude	= 'BrowserMetrics Cache "Code Cache" GPUCache CacheStorage optimization_guide_prediction_model_downloads'
 			},
 			@{
-				title	= 'Thunderbird (64-bit)'
+				title	= 'Thunderbird'
 				path	= "$env:AppData\Thunderbird\Profiles\ln02bahd.default-esr"
-				backup	= "$setupsPath\Thunderbird (64-bit)\.Thunderbird Settings  -CR\ln02bahd.default-esr"
+				backup	= "$setupsPath\Thunderbird\.Thunderbird Settings  -CR\ln02bahd.default-esr"
 			}
 		)
 	}
 	
 	Write-Host -NoNewLine "`n`n`t Running Beyond Compare... "
-	Start-Process "$portablesPath\Beyond Compare (64-bit)\BCompare.exe" 'Unique'
+	Start-Process "$portablesPath\Beyond Compare\BCompare.exe" 'Unique'
 	check_mark
 	
 	finish
