@@ -29,11 +29,6 @@ function main {
 	sync @{
 		registry = @(
 			@{
-				title	= '7-Zip (64-bit)'
-				path	= 'HKCU\SOFTWARE\7-Zip'
-				backup	= "$setupsPath\7-Zip (64-bit)\.7-Zip Settings  -CR.reg"
-			},
-			@{
 				title	= 'Internet Download Manager'
 				path	= 'HKCU\SOFTWARE\DownloadManager'
 				backup	= "$setupsPath\Internet Download Manager\.Internet Download Manager Settings  -CR.reg"
@@ -69,6 +64,11 @@ function main {
 				title	= 'Thunderbird'
 				path	= "$env:AppData\Thunderbird\Profiles\ln02bahd.default-esr"
 				backup	= "$setupsPath\Thunderbird\.Thunderbird Settings  -CR\ln02bahd.default-esr"
+			},
+			@{
+				title	= 'NanaZip  (Store)'
+				path	= "$env:LocalAppData\Packages\40174MouriNaruto.NanaZip_gnj4mf6z9tkrc\SystemAppData"
+				backup	= "$storePath\NanaZip\.NanaZip Settings  -CR\SystemAppData"
 			}
 		)
 	}
