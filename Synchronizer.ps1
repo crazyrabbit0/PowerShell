@@ -12,6 +12,7 @@ if (-not (Test-Path env:cr)) { $env:cr = 'C:\CR' }
 
 $setupsPath = "$env:cr\Programs\Setups"
 $portablesPath = "$env:cr\Programs\Portables"
+$storePath = "$env:cr\Programs\Store"
 
 ############################## MAIN CODE ##############################
 
