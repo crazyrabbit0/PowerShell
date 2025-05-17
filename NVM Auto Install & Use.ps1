@@ -15,28 +15,28 @@ Function My-Cd {
     param (
         $path
     )
-    
+
     # Run default "cd" command
     Set-Location -Path $path
     if (-not $?) { return }
-    
+
     $nvm = @{
-        folder      = "$env:AppData/nvm/"
+        folder      = "$env:NVM_HOME"
         isInstalled = $null
         url         = 'https://github.com/coreybutler/nvm-windows/releases/latest'
-        webdata     = $null
+        webData     = $null
         download    = $null
         tmp         = "$env:TMP/nvm-setup.exe"
     }
 
     $node = @{
-        folder      = "$env:ProgramFiles\nodejs"
+        folder      = "$env:NVM_SYMLINK"
         isPresent   = $null
         newest      = $null
         current     = $null
         isCurrent   = $null
     }
-    
+
     $project = @{
         package     = 'package.json'
         nvmrc       = '.nvmrc'
@@ -46,7 +46,7 @@ Function My-Cd {
             isCurrent   = $null
         }
     }
-    
+
     # Check for NVM Installation
     $nvm.isInstalled    = Test-Path $nvm.folder -PathType Container
     $node.isPresent     = Test-Path $node.folder -PathType Container
@@ -62,17 +62,17 @@ Function My-Cd {
             )
             return
         }
-        
+
         # Download & Install NVM for Windows
-        $nvm.webdata    = Invoke-RestMethod $nvm.url
-        $nvm.download   = (($nvm.webdata | Select-String 'app-argument=(.*?)"').Matches.Groups[1].Value).Replace('tag', 'download') + '/nvm-setup.exe'
+        $nvm.webData    = Invoke-RestMethod $nvm.url
+        $nvm.download   = (($nvm.webData | Select-String 'app-argument=(.*?)"').Matches.Groups[1].Value).Replace('tag', 'download') + '/nvm-setup.exe'
         #$ProgressPreference = "SilentlyContinue"   # Hide download progress
         'Downloading latest NVM for Windows...'
         Start-BitsTransfer -Source $nvm.download -Destination $nvm.tmp -DisplayName 'Downloading latest NVM for Windows...'
         'Installing latest NVM for Windows...'
         Start-Process $nvm.tmp '/SP- /VERYSILENT /SUPPERMSGSBOXES /NORESTART' -Wait
         Remove-Item $nvm.tmp
-        
+
         # Update Environment Variables
         $env:NVM_HOME = [System.Environment]::GetEnvironmentVariable("NVM_HOME","Machine")
         $env:NVM_SYMLINK = [System.Environment]::GetEnvironmentVariable("NVM_SYMLINK","Machine")
@@ -84,7 +84,7 @@ Function My-Cd {
             $node.current = (Get-Item $node.folder).target[0]
         }
     }
-    
+
     <# Removed package.json check
     #
     # If package.json exist: Set as Project's Node.js version
@@ -97,12 +97,12 @@ Function My-Cd {
         $project.node.version = Get-Content $project.nvmrc -First 1
     }
     #>
-    
+
     # If .nvmrc exists: Set as Project's Node.js version
     if (Test-Path $project.nvmrc -PathType Leaf) {
         $project.node.version = Get-Content $project.nvmrc -First 1
     }
-    
+
     # If Project's Node.js version is set: Install/Use Project's Node.js version
     if ($project.node.version) {
         $project.node.isInstalled = ([array](Get-ChildItem $nvm.folder -Directory).Name -Match "^$($project.node.version)")[0]
@@ -133,13 +133,16 @@ Function My-Cd {
         }
     }
     #>
-    
-    # Refresh Path Environment Veriable
+
+    # Refresh Path Environment Variable
     $env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')
-    
-    # Update Path Environment Veriable to match Current Node version
-    $node.current   = (Get-Item $node.folder).target[0]
-    $env:Path       = $env:Path.Replace($env:NVM_SYMLINK, $node.current)
+
+    # Update Path Environment Variable to match Current Node version
+    # (For multiple versions in concurrent Terminal sessions)
+    if ($node.isPresent -and $project.node.version) {
+        $node.current   = (Get-Item $node.folder).target[0]
+        $env:Path       = $env:Path.Replace($env:NVM_SYMLINK, $node.current)
+    }
 }
 
 # Override "cd" alias
