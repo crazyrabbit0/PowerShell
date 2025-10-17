@@ -45,6 +45,16 @@ function main {
 				title	= 'AnyDesk'
 				path	= "$env:AppData\AnyDesk\user.conf"
 				backup	= "$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
+			},
+			@{
+				title	= 'MEGAsync'
+				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.conf"
+				backup	= "$setupsPath\MEGAsync\.MEGAsync Settings  -CR\MEGAsync.conf"
+			},
+			@{
+				title	= 'Stacher'
+				path	= "$env:AppData\Stacher7\CR.stacfg"
+				backup	= "$setupsPath\Stacher\.Stacher Settings  -CR\CR.stacfg"
 			}
 		)
 		
