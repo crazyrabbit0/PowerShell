@@ -118,6 +118,7 @@ Function My-Cd {
     }
 
     # If Project's Node.js version isn't set: Install/Use Latest/Newest Node.js version
+    <#
     else {
         $node.newest = ([array](Get-ChildItem $nvm.folder -Directory).Name -Match '^v\d+')[-1]
         if (-not $node.newest) {
@@ -131,6 +132,7 @@ Function My-Cd {
             Start-Process nvm 'use newest' -Verb RunAs -WindowStyle Hidden -Wait
         }
     }
+    #>
 
     # Refresh Path Environment Variable
     $env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')
