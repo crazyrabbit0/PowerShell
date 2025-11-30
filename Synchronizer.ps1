@@ -48,8 +48,8 @@ function main {
 			},
 			@{
 				title	= 'MEGAsync'
-				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.conf"
-				backup	= "$setupsPath\MEGAsync\.MEGAsync Settings  -CR\MEGAsync.conf"
+				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg"
+				backup	= "$setupsPath\MEGAsync\.MEGAsync Settings  -CR\MEGAsync.cfg"
 			},
 			@{
 				title	= 'Stacher'
