@@ -41,14 +41,12 @@ $actions = @(
 		#log_code = {return (Get-EventLog -LogName 'Application' -Source 'ChkDsk')[0].Message}
 	},
 	@{
-		title           = ' Repair Windows Image'
+		title           = ' Repair & Clean Windows Image'
 		code            = {
-			#Dism /Cleanup-Wims
-			#Dism /Online /Cleanup-Image /CheckHealth
 			#Dism /Online /Cleanup-Image /ScanHealth
-			#Dism /Online /Cleanup-Image /StartComponentCleanup #/ResetBase
+			Dism /Online /Cleanup-Image /RestoreHealth #/Source:D:\sources\install.wim /LimitAccess
 			#Dism /Online /Cleanup-Image /AnalyzeComponentStore
-			Dism /Online /Cleanup-Image /RestoreHealth #/Source:D:\sources\install.wim /LimitAcces
+			Dism /Online /Cleanup-Image /StartComponentCleanup #/ResetBase
 		}
 		percentage_code = {
 			param ([object]$job)
