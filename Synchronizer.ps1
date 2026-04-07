@@ -31,12 +31,12 @@ function main {
 			@{
 				title	= 'Internet Download Manager'
 				path	= 'HKCU\SOFTWARE\DownloadManager'
-				backup	= "$setupsPath\Internet Download Manager\.Internet Download Manager Settings  -CR.reg"
+				backup	= "$setupsPath\Internet Download Manager\.settings.reg"
 			},
 			@{
 				title	= 'Cheat Engine'
 				path	= 'HKCU\SOFTWARE\Cheat Engine'
-				backup	= "$portablesPath\Cheat Engine\.Cheat Engine Settings  -CR.reg"
+				backup	= "$portablesPath\Cheat Engine\.settings.reg"
 			}
 		)
 		
@@ -44,41 +44,51 @@ function main {
 			@{
 				title	= 'AnyDesk'
 				path	= "$env:AppData\AnyDesk\user.conf"
-				backup	= "$portablesPath\AnyDesk\.AnyDesk Settings  -CR\user.conf"
+				backup	= "$portablesPath\AnyDesk\.settings\user.conf"
+			},
+			@{
+				title	= 'Handy'
+				path	= "$env:AppData\com.pais.handy\settings_store.json"
+				backup	= "$portablesPath\Handy\.settings\settings_store.json"
 			},
 			@{
 				title	= 'MEGAsync'
 				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg"
-				backup	= "$setupsPath\MEGAsync\.MEGAsync Settings  -CR\MEGAsync.cfg"
+				backup	= "$setupsPath\MEGAsync\.settings\MEGAsync.cfg"
+			},
+			@{
+				title	= 'OpenCode'
+				path	= "$env:UserProfile\.config\opencode\opencode.json"
+				backup	= "$portablesPath\OpenCode\.settings\opencode.json"
+			},
+			@{
+				title	= 'Oh My OpenCode'
+				path	= "$env:UserProfile\.config\opencode\oh-my-opencode.json"
+				backup	= "$portablesPath\OpenCode\.settings\oh-my-opencode.json"
 			},
 			@{
 				title	= 'Stacher'
 				path	= "$env:AppData\Stacher7\CR.stacfg"
-				backup	= "$setupsPath\Stacher\.Stacher Settings  -CR\CR.stacfg"
+				backup	= "$setupsPath\Stacher\.settings\CR.stacfg"
 			}
 		)
 		
 		folders = @(
 			@{
-				title	= 'GitHub Desktop'
-				path	= "$env:AppData\GitHub Desktop"
-				backup	= "$setupsPath\GitHub Desktop\.GitHub Desktop Settings  -CR\GitHub Desktop"
-			},
-			@{
 				title	= 'Chrome'
 				path	= "$env:LocalAppData\Google\Chrome\User Data"
-				backup	= "$setupsPath\Chrome\.Chrome Settings  -CR\User Data"
+				backup	= "$setupsPath\Chrome\.settings\User Data"
 				exclude	= 'BrowserMetrics Cache "Code Cache" GPUCache CacheStorage optimization_guide_prediction_model_downloads'
 			},
 			@{
 				title	= 'Thunderbird'
 				path	= "$env:AppData\Thunderbird\Profiles\ln02bahd.default-esr"
-				backup	= "$setupsPath\Thunderbird\.Thunderbird Settings  -CR\ln02bahd.default-esr"
+				backup	= "$setupsPath\Thunderbird\.settings\ln02bahd.default-esr"
 			},
 			@{
 				title	= 'NanaZip  (Store)'
 				path	= "$env:LocalAppData\Packages\40174MouriNaruto.NanaZip_gnj4mf6z9tkrc\SystemAppData"
-				backup	= "$storePath\NanaZip\.NanaZip Settings  -CR\SystemAppData"
+				backup	= "$storePath\NanaZip\.settings\SystemAppData"
 			}
 		)
 	}
