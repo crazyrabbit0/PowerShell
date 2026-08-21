@@ -41,7 +41,7 @@ $actions = @(
 		#log_code = {return (Get-EventLog -LogName 'Application' -Source 'ChkDsk')[0].Message}
 	},
 	@{
-		title           = ' Repair & Clean Windows Image'
+		title           = ' Repair Windows Image'
 		code            = {
 			#Dism /Online /Cleanup-Image /ScanHealth
 			Dism /Online /Cleanup-Image /RestoreHealth #/Source:D:\sources\install.wim /LimitAccess

@@ -55,21 +55,6 @@ function main {
 				title	= 'MEGAsync'
 				path	= "$env:LocalAppData\Mega Limited\MEGAsync\MEGAsync.cfg"
 				backup	= "$setupsPath\MEGAsync\.settings\MEGAsync.cfg"
-			},
-			@{
-				title	= 'OpenCode'
-				path	= "$env:UserProfile\.config\opencode\opencode.json"
-				backup	= "$portablesPath\OpenCode\.settings\opencode.json"
-			},
-			@{
-				title	= 'Oh My OpenCode'
-				path	= "$env:UserProfile\.config\opencode\oh-my-opencode.json"
-				backup	= "$portablesPath\OpenCode\.settings\oh-my-opencode.json"
-			},
-			@{
-				title	= 'Stacher'
-				path	= "$env:AppData\Stacher7\CR.stacfg"
-				backup	= "$setupsPath\Stacher\.settings\CR.stacfg"
 			}
 		)
 		
