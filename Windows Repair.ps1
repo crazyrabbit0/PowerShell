@@ -140,9 +140,11 @@ $views = @{
 		height = 10
 	}
 	open_log_button     = @{
-		text  = '  Open Log'
-		font  = 'Segoe UI Semibold, 10'
-		color = 'RoyalBlue'
+		text   = 'Log'
+		font   = 'Segoe UI Semibold, 10'
+		color  = 'White'
+		back   = 'RoyalBlue'
+		height = 24
 	}
 	textarea            = @{
 		font       = 'Consolas, 9'
@@ -151,7 +153,7 @@ $views = @{
 		wordwrap   = $FALSE	# increases loading speed dramatically
 	}
 	exit                = @{
-		text          = 'A restart is required to finish the repair!'
+		text          = 'A restart is required!'
 		font          = 'Segoe UI Semibold, 10'
 		color         = 'RoyalBlue'
 		console_color = 'DarkCyan'
@@ -219,7 +221,7 @@ function main {
 			$NULL = add_row $form 'label' $views.title $_.title -span 2
 			$_.slot = add_slot $form -name $_.title -span $(if ($_.percentage_code) { 1 } else { 2 })
 			$NULL = set_slot $_.slot 'label' $views.queued
-			if ($_.percentage_code) { $NULL = add_log_button $form $views $_ }	# present from the start, so the log can be opened mid-run
+			if ($_.percentage_code) { $_.log_button = add_log_button $form $views $_ }	# built up front, but hidden until the action starts
 		}
 	}
 
@@ -328,7 +330,10 @@ function style_control {
 		{ @('label', 'checkbox', 'button') -contains $_ } {
 			$control.ForeColor = $view.color
 			$control.UseCompatibleTextRendering = $TRUE
-			$control.Cursor = 'Hand'
+		}
+		
+		{ @('checkbox', 'button') -contains $_ } {
+			$control.Cursor = 'Hand'	# only on what is actually clickable - labels keep the arrow
 		}
 		
 		'button' {
@@ -439,7 +444,9 @@ function add_log_button {
 		[parameter(Mandatory)] [object] $action
 	)
 	
-	$log_button = add_row $form 'button' $views.open_log_button -name $action.title -align 'Right'
+	$log_button = add_row $form 'button' $views.open_log_button -name $action.title -align 'Right' -indent 12	# indent = breathing room between the progress bar and this button
+	$log_button.Visible = $FALSE	# nothing to show while the action is still queued
+	$log_button.Width = 64
 	
 	$log_button.Add_Click({
 			$action_title = $this.Name.split(' ', 2)[-1]
@@ -449,7 +456,7 @@ function add_log_button {
 			
 			$log_form = New-Object 'System.Windows.Forms.Form' -Property @{
 				Text            = "$($action_title.substring(2)): Log"
-				ClientSize      = New-Object 'System.Drawing.Size' 1000, 500
+				ClientSize      = New-Object 'System.Drawing.Size' 657, 502
 				FormBorderStyle = 'Sizable'
 				BackColor       = '#ffffff'
 				StartPosition   = 'CenterScreen'
@@ -473,6 +480,10 @@ function add_log_button {
 			$log_form.Add_FormClosed({ $action.log_form = $NULL; $action.log_textbox = $NULL }.GetNewClosure())
 			
 			$log_form.Show()	# Show not ShowDialog: a modal window would freeze the polling loop that feeds it
+			
+			$log_textbox.SelectionStart = $log_textbox.TextLength	# scroll to the newest output - ScrollToCaret needs the handle, so this runs after Show
+			$log_textbox.SelectionLength = 0
+			$log_textbox.ScrollToCaret()
 		})
 	
 	$log_button
@@ -488,6 +499,36 @@ function append_log {
 	if ($action.log_textbox -and -not $action.log_textbox.IsDisposed) { $action.log_textbox.AppendText($chunk) }	# AppendText auto-scrolls; setting .Text would reset the caret
 }
 
+# drains whatever the job has emitted since the last poll into the action log, and hands the chunk back for the per-command log
+function drain_job {
+	param (
+		[parameter(Mandatory)] [object] $job,
+		[parameter(Mandatory)] [object] $action
+	)
+	
+	$new = Receive-Job -Job $job 2>&1	# no -Keep: drains only what arrived since the last poll, so the log streams live
+	if (-not $new) { return '' }
+	
+	$chunk = (($new | ForEach-Object { "$_" }) -Join "`r`n") + "`r`n"
+	append_log $action $chunk
+	$chunk
+}
+
+# each command owns an equal slice of the bar, so a multi-command action never restarts the bar at 0
+function set_progress {
+	param (
+		[parameter(Mandatory)] [object] $progressbar,
+		[parameter(Mandatory)] [object] $action,
+		[parameter(Mandatory)] [AllowEmptyString()] [string] $command_log,
+		[parameter(Mandatory)] [int] $index,
+		[parameter(Mandatory)] [int] $count
+	)
+	
+	$percentage = clamp_percentage (Invoke-Command -ScriptBlock $action.percentage_code -ArgumentList $command_log, $action)	# measured against THIS command's output only - the full log still holds the previous command's trailing 100%
+	$overall = clamp_percentage (($index * 100 + $percentage) / $count)
+	if ($overall -gt $progressbar.Value) { $progressbar.Value = $overall }	# never backwards: jitter in the source output would read as a restart
+}
+
 function run_action {
 	param (
 		[parameter(Mandatory)] [object] $form,
@@ -500,24 +541,32 @@ function run_action {
 	if ($global:debug) { $form.Add_KeyDown({ if ($_.KeyCode -eq 'Escape' -and $job.State -eq 'Running') { Stop-Job -Job $job } }) }
 
 	Write-Host "`n $($action.title)"
+	if ($action.log_button) { $action.log_button.Visible = $TRUE }	# revealed on running, and stays for the finished state - before set_slot, which sizes the bar from the column widths this widens
 	$progressbar = set_slot $action.slot 'progressbar' $views.progressbar
 	if ($action.percentage_code) { $progressbar.Style = 'Continuous' }
 
-	$checked_code = ($action.code | ForEach-Object { "$_ `n ${global:error_check_code}" }) -Join "`n"	# check exit code after EVERY command, not just the last
-	$job = Start-Job -ScriptBlock ([ScriptBlock]::Create($checked_code)) -ArgumentList $action.code_arguments
-	do {
-		$new = Receive-Job -Job $job 2>&1	# no -Keep: drains only what arrived since the last poll, so the log streams live
-		if ($new) { append_log $action ((($new | ForEach-Object { "$_" }) -Join "`r`n") + "`r`n") }
+	$job_state = 'Completed'
+	$index = 0
+	foreach ($command in $action.code) {	# one job per command: each gets its own progress slice, and a failure stops the rest
+		$checked_code = "$command `n ${global:error_check_code}"	# check exit code after EVERY command, not just the last
+		$job = Start-Job -ScriptBlock ([ScriptBlock]::Create($checked_code)) -ArgumentList $action.code_arguments
+		$command_log = ''
+		do {
+			$command_log += drain_job $job $action
+			
+			if ($action.percentage_code) { set_progress $progressbar $action $command_log $index $action.code.Count }
+			[System.Windows.Forms.Application]::DoEvents()
+			Start-Sleep -Milliseconds 50	# without this the loop spins ~3800x/sec, pegging a core for the whole run
+		} until ($job.State -ne 'Running')
 		
-		if ($action.percentage_code) { $progressbar.Value = clamp_percentage (Invoke-Command -ScriptBlock $action.percentage_code -ArgumentList $action.log, $action) }
-		[System.Windows.Forms.Application]::DoEvents()
-		Start-Sleep -Milliseconds 50	# without this the loop spins ~3800x/sec, pegging a core for the whole run
-	} until ($job.State -ne 'Running')
-
-	$new = Receive-Job -Job $job 2>&1	# final drain: whatever landed between the last poll and the job ending
-	if ($new) { append_log $action ((($new | ForEach-Object { "$_" }) -Join "`r`n") + "`r`n") }
-	$job_state = $job.State
-	Remove-Job -Job $job -Force
+		$command_log += drain_job $job $action	# final drain: whatever landed between the last poll and the job ending
+		$job_state = $job.State
+		Remove-Job -Job $job -Force
+		
+		if ($job_state -ne 'Completed') { break }	# abort the action on the first failed command, as the single-job version did
+		$index++
+		if ($action.percentage_code) { $progressbar.Value = clamp_percentage ($index * 100 / $action.code.Count) }	# close the slice: the source rarely prints a final 100%
+	}
 	
 	$result_view = $(If ($job_state -eq 'Completed') { $views.success } else { $views.fail })
 	Write-Host "`n --- $($result_view.text) ---" -ForegroundColor $result_view.console_color
