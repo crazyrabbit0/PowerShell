@@ -153,7 +153,7 @@ $views = @{
 		wordwrap   = $FALSE	# increases loading speed dramatically
 	}
 	exit                = @{
-		text          = 'A restart is required!'
+		text          = 'Restart is required!'
 		font          = 'Segoe UI Semibold, 10'
 		color         = 'RoyalBlue'
 		console_color = 'DarkCyan'
@@ -165,7 +165,7 @@ $views = @{
 		console_color = 'DarkCyan'
 	}
 	restart_button      = @{
-		text   = ' Restart Now'
+		text   = ' Restart Now'
 		font   = 'Segoe UI Semibold, 10'
 		color  = 'White'
 		back   = 'Crimson'
@@ -596,7 +596,7 @@ function finish {
 	}
 
 	Write-Host "`n --- $($views.exit.text) ---" -ForegroundColor $views.exit.console_color
-	$NULL = add_row $form 'label' $views.exit -span 2	# exit_label
+	$NULL = add_row $form 'label' $views.exit -span 2 -indent $global:indent -tight	# exit_label - same indent as close_label, under the finish title's text
 
 	$restart_button = add_row $form 'button' $views.restart_button -align 'Fill' -span 2
 	$restart_button.Add_Click({
