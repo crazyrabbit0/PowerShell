@@ -4,7 +4,7 @@
 $global:debug = 0
 $global:display = 'Minimized'
 $global:title = 'Windows Repair'
-$global:args = $args
+$global:script_args = $args
 
 ############################## VARIABLES ##############################
 
@@ -15,24 +15,26 @@ $icon = @{
 
 $actions = @(
 	@{
-		title = ' Clean Disk'
-		code  = {
-			Start-Process 'CleanMgr' <# #> -Wait
-			#Start-Process 'CleanMgr' '/LowDisk' -Wait
-			#Start-Process 'CleanMgr' '/VeryLowDisk' -Wait
-		}
+		title = '   Clean Disk'
+		code  = @(
+			{ Start-Process 'CleanMgr' <# #> -Wait }
+			#{ Start-Process 'CleanMgr' '/LowDisk' -Wait }
+			#{ Start-Process 'CleanMgr' '/VeryLowDisk' -Wait }
+		)
 	},
 	@{
-		title           = ' Check Disk'
-		code            = {
-			ChkDsk /Scan /Perf #/R
-			#ChkDsk /F #/R
-		}
+		title           = '   Check Disk'
+		needs_restart   = $TRUE
+		code            = @(
+			{ ChkDsk /Scan /Perf } #/R
+			#{ ChkDsk /F } #/R
+		)
+		total_stages    = 3	# /Scan reports 3 stages; set to 5 when enabling /R
 		percentage_code = {
-			param ([object]$job)
+			param ([string]$log, [object]$action)
 			try {
-				$last_stage = [int](Receive-job -Job $job -Keep | Select-String 'Stage (\d+)').Matches[-1].Groups[1].Value
-				return $last_stage * 33
+				$last_stage = [int]($log | Select-String 'Stage (\d+)' -AllMatches).Matches[-1].Groups[1].Value
+				return $last_stage * 100 / $action.total_stages
 			}
 			catch {
 				return 0
@@ -41,17 +43,18 @@ $actions = @(
 		#log_code = {return (Get-EventLog -LogName 'Application' -Source 'ChkDsk')[0].Message}
 	},
 	@{
-		title           = ' Repair Windows Image'
-		code            = {
-			#Dism /Online /Cleanup-Image /ScanHealth
-			Dism /Online /Cleanup-Image /RestoreHealth #/Source:D:\sources\install.wim /LimitAccess
-			#Dism /Online /Cleanup-Image /AnalyzeComponentStore
-			Dism /Online /Cleanup-Image /StartComponentCleanup #/ResetBase
-		}
+		title           = '   Repair Windows Image'
+		needs_restart   = $TRUE
+		code            = @(	# one scriptblock per command, so each is error-checked separately
+			#{ Dism /Online /Cleanup-Image /ScanHealth },
+			{ Dism /Online /Cleanup-Image /RestoreHealth }, #/Source:D:\sources\install.wim /LimitAccess
+			#{ Dism /Online /Cleanup-Image /AnalyzeComponentStore },
+			{ Dism /Online /Cleanup-Image /StartComponentCleanup } #/ResetBase
+		)
 		percentage_code = {
-			param ([object]$job)
+			param ([string]$log, [object]$action)
 			try {
-				$percentage = [int](Receive-job $job -Keep | Select-String '(\d+)\.\d+%').Matches[-1].Groups[1].Value
+				$percentage = [int]($log | Select-String '(\d+)\.\d+%' -AllMatches).Matches[-1].Groups[1].Value
 				return $percentage
 			}
 			catch {
@@ -61,15 +64,15 @@ $actions = @(
 		#log_code = {return (Get-Content -Path "$env:WinDir\Logs\DISM\DISM.log") -Join "`r`n"}
 	},
 	@{
-		title           = ' Repair System Files'
-		code            = {
-			Sfc /ScanNow
-		}
+		title           = '   Repair System Files'
+		needs_restart   = $TRUE
+		code            = @(
+			{ Sfc /ScanNow }
+		)
 		percentage_code = {
-			param ([object]$job)
+			param ([string]$log, [object]$action)
 			try {
-				$percentage_string = (Receive-job $job -Keep | Select-String '\s+(.+)%').Matches[-1].Groups[1].Value
-				$percentage = [int]($percentage_string -Replace $percentage_string[0], '')
+				$percentage = [int]($log | Select-String '(\d+)%' -AllMatches).Matches[-1].Groups[1].Value
 				return $percentage
 			}
 			catch {
@@ -79,10 +82,10 @@ $actions = @(
 		#log_code = {return (Get-Content -Path "$env:WinDir\Logs\CBS\CBS.log") -Join "`r`n"}
 	},
 	@{
-		title = ' Optimize Disk'
-		code  = {
-			Start-Process 'DfrGui' -Wait
-		}
+		title = '   Optimize Disk'
+		code  = @(
+			{ Start-Process 'DfrGui' -Wait }
+		)
 	}
 )
 
@@ -90,113 +93,88 @@ $global:error_check_code = {
 	if (-not ($? -and $LastExitCode -in (0, $NULL))) { Throw "Operation failed, with exit code: $LastExitCode" }
 }
 
-$global:padding = @{
-	top    = 1
-	bottom = 50
-}
+# indent of a status row: starts the whole row under the title's text, clear of the title's icon
+$global:indent = 36
 
+# views carry appearance only - the TableLayoutPanel owns every position
 $views = @{
 	title               = @{
-		top   = 35
-		left  = 10
 		font  = 'Segoe UI, 13'
 		color = 'Black'
 	}
 	queued              = @{
-		top   = 30
-		left  = 30
 		text  = ' Queued'
 		font  = 'Segoe UI Semibold, 10'
 		color = 'RoyalBlue'
 	}
 	success             = @{
-		top           = 30
-		left          = 30
 		text          = ' Completed'
 		font          = 'Segoe UI Semibold, 10'
 		color         = 'DarkGreen'
 		console_color = 'DarkGreen'
 	}
 	fail                = @{
-		top           = 30
-		left          = 30
 		text          = ' Aborted'
 		font          = 'Segoe UI Semibold, 10'
 		color         = 'Crimson'
 		console_color = 'DarkRed'
 	}
 	select_all_button   = @{
-		top   = 30
-		left  = 10
 		text  = '[Select all]'
 		font  = 'Segoe UI Symbol, 10'
 		color = 'RoyalBlue'
 	}
 	deselect_all_button = @{
-		top   = 0
-		left  = 'end'
 		text  = '[Deselect all]'
 		font  = 'Segoe UI Symbol, 10'
 		color = 'RoyalBlue'
 	}
 	ok_button           = @{
-		top    = 45
-		left   = 10
-		width  = 'full'
-		height = 30
 		text   = ''
 		font   = 'Segoe UI Symbol, 13'
 		color  = 'White'
 		back   = 'DarkGreen'
-	}
-	cancel_button       = @{
-		top   = 0
-		left  = 140
-		text  = ''
-		font  = 'Segoe UI Symbol, 13'
-		color = 'White'
-		back  = 'Crimson'
+		height = 30
 	}
 	progressbar         = @{
-		top    = 30
-		left   = 15
-		width  = 'full'
 		height = 10
 	}
 	open_log_button     = @{
-		top   = 0
-		left  = 30
 		text  = '  Open Log'
 		font  = 'Segoe UI Semibold, 10'
 		color = 'RoyalBlue'
-		#back = 'RoyalBlue'
 	}
 	textarea            = @{
-		top        = 20
-		left       = 15
-		width      = 'full'
-		height     = 'full'
+		font       = 'Consolas, 9'
 		multiline  = $TRUE
 		scrollbars = 'both'
 		wordwrap   = $FALSE	# increases loading speed dramatically
 	}
 	exit                = @{
-		top           = 30
-		left          = 30
 		text          = 'A restart is required to finish the repair!'
 		font          = 'Segoe UI Semibold, 10'
 		color         = 'RoyalBlue'
 		console_color = 'DarkCyan'
 	}
+	close               = @{
+		text          = 'You can close the window'
+		font          = 'Segoe UI Semibold, 10'
+		color         = 'RoyalBlue'
+		console_color = 'DarkCyan'
+	}
 	restart_button      = @{
-		top    = 30
-		left   = 10
-		width  = 'full'
-		height = 30
 		text   = ' Restart Now'
 		font   = 'Segoe UI Semibold, 10'
 		color  = 'White'
 		back   = 'Crimson'
+		height = 30
+	}
+	close_button        = @{
+		text   = ' Close Window'
+		font   = 'Segoe UI Semibold, 10'
+		color  = 'White'
+		back   = 'RoyalBlue'
+		height = 30
 	}
 }
 
@@ -208,28 +186,28 @@ function main {
 	if (-not $global:debug) { hide_powershell }
 	
 	Write-Host "`n===============  $global:title  ===============`n"
-	$form = make_form $global:title $icon '260, 0'
+	$form = make_form $global:title $icon '260, 0' -autosize
 	$form.Add_KeyDown({ if ($_.KeyCode -eq 'Enter') { $this.DialogResult = 'OK' } })
 	$form.Add_Closing({ if ($this.DialogResult -eq 'OK' -and -not ($actions | Where-Object { $_.checkbox.checked })) { $_.Cancel = $TRUE } })
 
-	$select_all_button = add_control $form 'button' $views.select_all_button
+	$select_all_button = add_row $form 'button' $views.select_all_button
 	$select_all_button.Add_Click({
 			if ($actions | Where-Object { $_.checkbox.checked }) { $form.DialogResult = 'OK' }
 			else { $actions | ForEach-Object { $_.checkbox.checked = $TRUE } }
 		})
 	
-	$deselect_all_button = add_control $form 'button' $views.deselect_all_button
+	$deselect_all_button = add_row $form 'button' $views.deselect_all_button -align 'Right'
 	$deselect_all_button.Add_Click({ $actions | ForEach-Object { $_.checkbox.checked = $FALSE } })
 	
-	$actions | ForEach-Object { $_.checkbox = add_control $form 'checkbox' $views.title $_.title }
+	$actions | ForEach-Object { $_.checkbox = add_row $form 'checkbox' $views.title $_.title -span 2 }
 
-	$ok_button = add_control $form 'button' $views.ok_button
+	$ok_button = add_row $form 'button' $views.ok_button -align 'Fill' -span 2
 	$ok_button.Add_Click({ $form.DialogResult = 'OK' })
 	
 	$NULL = $form.ShowDialog()
 	if ($form.DialogResult -eq 'Cancel') { exit }
 	
-	$form = make_form $global:title $icon
+	$form = make_form $global:title $icon '300, 0' -autosize
 	$form.Add_Closing({
 			$exit_prompt = [System.Windows.Forms.MessageBox]::Show('You are about to exit the application!', 'Exit Application', 'OKCancel', 'Warning')
 			if ($exit_prompt -eq 'OK') { Start-Process 'TaskKill' "/f /t /pid $pid" -WindowStyle 'Hidden' }
@@ -238,8 +216,10 @@ function main {
 	
 	$actions | ForEach-Object {
 		if ($_.checkbox.Checked) {
-			$NULL = add_control $form 'label' $views.title $_.title
-			$NULL = add_control $form 'label' $views.queued -name $_.title
+			$NULL = add_row $form 'label' $views.title $_.title -span 2
+			$_.slot = add_slot $form -name $_.title -span $(if ($_.percentage_code) { 1 } else { 2 })
+			$NULL = set_slot $_.slot 'label' $views.queued
+			if ($_.percentage_code) { $NULL = add_log_button $form $views $_ }	# present from the start, so the log can be opened mid-run
 		}
 	}
 
@@ -256,7 +236,7 @@ function main {
 function run_as_admin {
 	$has_admin_rights = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
 	if (-not $has_admin_rights) {
-		Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(if ($NULL -ne $PSCommandPath) { "-File `"$PSCommandPath`" $global:args" } else { $MyInvocation.MyCommand.Definition -replace '"', "'" }) -WorkingDirectory $pwd -Verb 'RunAs' -WindowStyle $(if ($global:debug) { 'Normal' } else { $global:display })
+		Start-Process 'powershell' '-NoProfile -ExecutionPolicy Bypass', $(		if ($NULL -ne $PSCommandPath) { "-File `"$PSCommandPath`" $global:script_args" } else { $MyInvocation.MyCommand.Definition -replace '"', "'" }) -WorkingDirectory $pwd -Verb 'RunAs' -WindowStyle $(if ($global:debug) { 'Normal' } else { $global:display })
 		if ($global:debug) { pause }
 		exit
 	}
@@ -265,10 +245,22 @@ function run_as_admin {
 function hide_powershell {
 	param ([bool] $hide = $TRUE)
 	
-	Add-Type -Name 'user32' -NameSpace 'win32' -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);'
+	Add-Type -Name 'user32' -NameSpace 'win32' -MemberDefinition '
+		[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
+		[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
+	'
 
-	if (-not (Test-Path variable:global:console_handle)) { $global:console_handle = (get-process -id $pid).mainWindowHandle }
+	if (-not (Test-Path variable:global:console_handle)) { $global:console_handle = [win32.user32]::GetConsoleWindow() }	# MainWindowHandle is 0 in some hosts, GetConsoleWindow is not
+	if ($global:console_handle -eq [IntPtr]::Zero) { return }
 	[win32.user32]::ShowWindow($global:console_handle, $(if ($hide) { 0 } else { 5 }))
+}
+
+function clamp_percentage {
+	param ([int] $value)
+	
+	if ($value -lt 0) { return 0 }	# ProgressBar.Value throws outside 0-100
+	if ($value -gt 100) { return 100 }
+	$value
 }
 
 function make_form {
@@ -277,7 +269,8 @@ function make_form {
 		[object] $icon,
 		[string] $client_size = '300, 0',
 		[string] $border = 'FixedSingle',	# Not resizable
-		[string] $back_color = '#ffffff'
+		[string] $back_color = '#ffffff',
+		[switch] $autosize
 	)
 
 	Add-Type -AssemblyName 'System.Windows.Forms'
@@ -298,27 +291,33 @@ function make_form {
 	if ($icon) { set_form_icon $form $icon }
 	set_form_app_id $form $title	# Set Form Icon as Taskbar Icon
 	
-	$form | Add-Member -NotePropertyName 'current_top' -NotePropertyValue 0
+	if ($autosize) {
+		$form.AutoSize = $TRUE
+		$form.AutoSizeMode = 'GrowOnly'	# GrowAndShrink collapses the form to its widest control and truncates labels
+	}
+	
+	$stack = New-Object 'System.Windows.Forms.TableLayoutPanel' -Property @{
+		ColumnCount = 2
+		AutoSize    = $TRUE
+		Dock        = 'Top'	# not Fill: a filled panel hands its spare height to the last row, which then re-centres that row's contents
+		Padding     = New-Object 'System.Windows.Forms.Padding' 8
+	}
+	$stack.Add_SizeChanged({ $this.FindForm().ClientSize = New-Object 'System.Drawing.Size' $this.FindForm().ClientSize.Width, $this.Height })	# trim the form's autosize slack so the bottom margin matches the top, on every row added
+	$NULL = $stack.ColumnStyles.Add((New-Object 'System.Windows.Forms.ColumnStyle' 'Percent', 100))	# column 1 absorbs slack so 'Right' lands on the edge
+	$NULL = $stack.ColumnStyles.Add((New-Object 'System.Windows.Forms.ColumnStyle' 'AutoSize'))
+	$form.Controls.Add($stack)
+	$form | Add-Member -NotePropertyName 'stack' -NotePropertyValue $stack
 	
 	$form
 }
 
-function add_control {
+function style_control {
 	param (
-		[parameter(Mandatory)] [object] $form,
-		[parameter(Mandatory)] [object] $type,
+		[parameter(Mandatory)] [object] $control,
+		[parameter(Mandatory)] [string] $type,
 		[parameter(Mandatory)] [object] $view,
-		[string] $text = $view.text,
-		[string] $name,
-		[switch] $anchored
+		[string] $text
 	)
-	
-	$form.current_top += $(if ($form.current_top -eq 0) { $global:padding.top } else { $view.top })
-	
-	$control = New-Object System.Windows.Forms.$type -Property @{
-		Top  = $form.current_top
-		Name = "$type $name"
-	}
 	
 	switch ($type) {
 		{ @('label', 'checkbox', 'button', 'textbox') -contains $_ } {
@@ -329,12 +328,9 @@ function add_control {
 		{ @('label', 'checkbox', 'button') -contains $_ } {
 			$control.ForeColor = $view.color
 			$control.UseCompatibleTextRendering = $TRUE
-		}
-		
-		{ @('label', 'checkbox', 'button') -contains $_ } {
 			$control.Cursor = 'Hand'
 		}
-	
+		
 		'button' {
 			$control.FlatStyle = 'Flat'
 			$control.FlatAppearance.BorderSize = 0
@@ -353,70 +349,143 @@ function add_control {
 	}
 	
 	if ($NULL -ne $view.back) { $control.BackColor = $view.back }
+	if ($NULL -ne $view.height) { $control.Height = $view.height }
+}
+
+function add_row {
+	param (
+		[parameter(Mandatory)] [object] $form,
+		[parameter(Mandatory)] [string] $type,
+		[parameter(Mandatory)] [object] $view,
+		[string] $text = $view.text,
+		[string] $name,
+		[string] $align = 'Left',	# Left | Right | Fill
+		[int] $span = 1,
+		[int] $indent = 0,
+		[switch] $tight	# no gap above: keeps a sub-message attached to the line it belongs to
+	)
 	
-	if ($NULL -eq $view.height -and $NULL -eq $view.width) { $control.AutoSize = $TRUE }
-	else {
-		$control.height	= $(if ($view.height -eq 'full') { $form.height - $view.top * 2 - 16 } else { $view.height })
-		$control.width	= $(if ($view.width -eq 'full') { $form.width - $view.left * 2 - 16 } else { $view.width })
+	$control = New-Object "System.Windows.Forms.$type" -Property @{
+		AutoSize = $($NULL -eq $view.height)
+		Margin   = New-Object 'System.Windows.Forms.Padding' $indent, $(if ($tight) { 0 } else { 3 }), 0, 3
+		Name     = "$type $name"
 	}
 	
-	$control.Left = $(if ($view.left -eq 'end') { $form.width - $control.width - 44 } else { $view.left })
+	style_control $control $type $view $text
+	$control.Anchor = $(switch ($align) { 'Right' { 'Right' } 'Fill' { 'Left, Right' } default { 'Left' } })	# no Top: the row centres it, so neighbours of different heights line up
 	
-	if ($anchored) { $control.Anchor = 'Top, Left, Right, Bottom' }
+	$form.stack.Controls.Add($control)
+	if ($span -gt 1) { $form.stack.SetColumnSpan($control, $span) }
 	
-	$form.Controls.Add($control)
-	
-	if ($NULL -ne $view.bottom) { $form.current_top += $view.bottom }
-	
-	$form.Height = $form.current_top + $control.height + $global:padding.bottom
 	[System.Windows.Forms.Application]::DoEvents()
 	
 	$control
 }
 
-function replace_control {
+# a slot is a one-cell host: swapping its child never disturbs the surrounding rows
+function add_slot {
 	param (
 		[parameter(Mandatory)] [object] $form,
-		[parameter(Mandatory)] [string] $control_name,
-		[parameter(Mandatory)] [object] $new_type,
-		[parameter(Mandatory)] [object] $new_view
+		[string] $name,
+		[int] $span = 1
 	)
 	
-	$top = $form.Controls[$control_name].top
+	$slot = New-Object 'System.Windows.Forms.Panel' -Property @{
+		AutoSize     = $TRUE
+		AutoSizeMode = 'GrowAndShrink'
+		Margin       = New-Object 'System.Windows.Forms.Padding' $global:indent, 0, 0, 0
+		Anchor       = 'Left'	# no Top: let the row centre it, so it lines up with a taller neighbour
+		Name         = "slot $name"
+	}
 	
-	$form.Controls[$control_name].Dispose()
-	$new_control = add_control $form $new_type $new_view -name $control_name.split(' ', 2)[-1]
+	$form.stack.Controls.Add($slot)
+	if ($span -gt 1) { $form.stack.SetColumnSpan($slot, $span) }
 	
-	$new_control.Top = $top
-	$form.current_top -= $new_view.top
+	$slot
+}
+
+function set_slot {
+	param (
+		[parameter(Mandatory)] [object] $slot,
+		[parameter(Mandatory)] [string] $type,
+		[parameter(Mandatory)] [object] $view,
+		[string] $text = $view.text
+	)
 	
-	$new_control
+	$slot.Controls | ForEach-Object { $_.Dispose() }
+	$slot.Controls.Clear()
+	
+	$control = New-Object "System.Windows.Forms.$type" -Property @{ AutoSize = $($NULL -eq $view.height) }
+	style_control $control $type $view $text
+	
+	if ($type -eq 'progressbar') {
+		$widths = $slot.Parent.GetColumnWidths()
+		$first = $slot.Parent.GetPositionFromControl($slot).Column	# GetColumn returns -1 for auto-placed controls, and PowerShell reads [-1] as the LAST column
+		$span = $slot.Parent.GetColumnSpan($slot)
+		$cell = ($widths[$first..($first + $span - 1)] | Measure-Object -Sum).Sum
+		$control.Width = $cell - $slot.Margin.Left - $(if ($first + $span -ge $widths.Count) { $slot.Parent.Padding.Right } else { 0 })
+	}
+	
+	$slot.Controls.Add($control)
+	[System.Windows.Forms.Application]::DoEvents()
+	
+	$control
 }
 
 function add_log_button {
 	param (
 		[parameter(Mandatory)] [object] $form,
 		[parameter(Mandatory)] [object] $views,
-		[parameter(Mandatory)] [object] $action,
-		[parameter(Mandatory)] [object] $result_label
+		[parameter(Mandatory)] [object] $action
 	)
 	
-	$log_button = add_control $form 'button' $views.open_log_button -name $action.title
-	$log_button.Top = $result_label.Top - 6
-	$log_button.Left += $result_label.Left + $result_label.Width
-	$log_button.BringToFront()
+	$log_button = add_row $form 'button' $views.open_log_button -name $action.title -align 'Right'
 	
 	$log_button.Add_Click({
 			$action_title = $this.Name.split(' ', 2)[-1]
-
-			$log_form = make_form "$($action_title.substring(2)): Log" $icon '1000, 500' 'Sizable'
-			$log_form.MaximizeBox = $TRUE
-
-			$log_textbox = add_control $log_form 'textbox' $views.textarea -anchored
-			$log_textbox.AppendText(($actions | Where-Object { $_.title -eq $action_title }).log)
-
-			$log_form.ShowDialog()
+			$action = $actions | Where-Object { $_.title -eq $action_title }
+			
+			if ($action.log_form -and -not $action.log_form.IsDisposed) { $action.log_form.Activate(); return }	# reuse the window instead of stacking copies
+			
+			$log_form = New-Object 'System.Windows.Forms.Form' -Property @{
+				Text            = "$($action_title.substring(2)): Log"
+				ClientSize      = New-Object 'System.Drawing.Size' 1000, 500
+				FormBorderStyle = 'Sizable'
+				BackColor       = '#ffffff'
+				StartPosition   = 'CenterScreen'
+				MaximizeBox     = $TRUE
+			}
+			if ($icon) { set_form_icon $log_form $icon }
+			
+			$log_textbox = New-Object 'System.Windows.Forms.TextBox' -Property @{
+				Dock     = 'Fill'
+				ReadOnly = $TRUE
+				Font     = $views.textarea.font
+			}
+			$log_textbox.MultiLine = $views.textarea.multiline
+			$log_textbox.ScrollBars = $views.textarea.scrollbars
+			$log_textbox.WordWrap = $views.textarea.wordwrap
+			$log_form.Controls.Add($log_textbox)
+			$log_textbox.AppendText($action.log)
+			
+			$action.log_form = $log_form
+			$action.log_textbox = $log_textbox	# run_action appends here while the job streams
+			$log_form.Add_FormClosed({ $action.log_form = $NULL; $action.log_textbox = $NULL }.GetNewClosure())
+			
+			$log_form.Show()	# Show not ShowDialog: a modal window would freeze the polling loop that feeds it
 		})
+	
+	$log_button
+}
+
+function append_log {
+	param (
+		[parameter(Mandatory)] [object] $action,
+		[parameter(Mandatory)] [string] $chunk
+	)
+	
+	$action.log += $chunk
+	if ($action.log_textbox -and -not $action.log_textbox.IsDisposed) { $action.log_textbox.AppendText($chunk) }	# AppendText auto-scrolls; setting .Text would reset the caret
 }
 
 function run_action {
@@ -431,22 +500,29 @@ function run_action {
 	if ($global:debug) { $form.Add_KeyDown({ if ($_.KeyCode -eq 'Escape' -and $job.State -eq 'Running') { Stop-Job -Job $job } }) }
 
 	Write-Host "`n $($action.title)"
-	$progressbar = replace_control $form "label $($action.title)" 'progressbar' $views.progressbar
+	$progressbar = set_slot $action.slot 'progressbar' $views.progressbar
 	if ($action.percentage_code) { $progressbar.Style = 'Continuous' }
 
-	$job = Start-Job -ScriptBlock ([ScriptBlock]::Create("$($action.code) `n ${global:error_check_code}")) -ArgumentList $action.code_arguments #| Receive-Job -AutoRemoveJob -Wait
+	$checked_code = ($action.code | ForEach-Object { "$_ `n ${global:error_check_code}" }) -Join "`n"	# check exit code after EVERY command, not just the last
+	$job = Start-Job -ScriptBlock ([ScriptBlock]::Create($checked_code)) -ArgumentList $action.code_arguments
 	do {
-		if ($action.percentage_code) { $progressbar.Value = Invoke-Command -ScriptBlock $action.percentage_code -ArgumentList $job }
+		$new = Receive-Job -Job $job 2>&1	# no -Keep: drains only what arrived since the last poll, so the log streams live
+		if ($new) { append_log $action ((($new | ForEach-Object { "$_" }) -Join "`r`n") + "`r`n") }
+		
+		if ($action.percentage_code) { $progressbar.Value = clamp_percentage (Invoke-Command -ScriptBlock $action.percentage_code -ArgumentList $action.log, $action) }
 		[System.Windows.Forms.Application]::DoEvents()
+		Start-Sleep -Milliseconds 50	# without this the loop spins ~3800x/sec, pegging a core for the whole run
 	} until ($job.State -ne 'Running')
 
-	$action.log = ((Receive-Job -Job $job -AutoRemoveJob -Wait) -Join "`r`n") # + $(if ($action.log_code) { "`r`n" * 5 + '=' * 60 + 'Verbose Log' + '=' * 60 + "`r`n" * 5 + (Invoke-Command -ScriptBlock $action.log_code) })
+	$new = Receive-Job -Job $job 2>&1	# final drain: whatever landed between the last poll and the job ending
+	if ($new) { append_log $action ((($new | ForEach-Object { "$_" }) -Join "`r`n") + "`r`n") }
+	$job_state = $job.State
+	Remove-Job -Job $job -Force
 	
-	$result_view = $(If ($job.State -eq 'Completed') { $views.success } else { $views.fail })
+	$result_view = $(If ($job_state -eq 'Completed') { $views.success } else { $views.fail })
 	Write-Host "`n --- $($result_view.text) ---" -ForegroundColor $result_view.console_color
 	
-	$result_label = replace_control $form "progressbar $($action.title)" 'label' $result_view
-	if ($action.percentage_code) { add_log_button $form $views $action $result_label }
+	$NULL = set_slot $action.slot 'label' $result_view
 
 	$form.ResetCursor()
 }
@@ -455,16 +531,25 @@ function finish {
 	param (
 		[parameter(Mandatory)] [object] $form,
 		[parameter(Mandatory)] [object] $views,
-		[string] $text = ' Process Finished'
+		[string] $text = '   Process Finished'
 	)
 
 	Write-Host "`n`n===============  $text  ===============`n"
-	add_control $form 'label' $views.title $text	# finish_label
+	$NULL = add_row $form 'label' $views.title $text -span 2	# finish_label
+
+	if (-not ($actions | Where-Object { $_.checkbox.Checked -and $_.needs_restart })) {	# Clean Disk / Optimize Disk alone need no restart
+		Write-Host "`n --- $($views.close.text) ---" -ForegroundColor $views.close.console_color
+		$NULL = add_row $form 'label' $views.close -span 2 -indent $global:indent -tight	# close_label
+		
+		$close_button = add_row $form 'button' $views.close_button -align 'Fill' -span 2
+		$close_button.Add_Click({ Start-Process 'TaskKill' "/f /t /pid $pid" -WindowStyle 'Hidden' })
+		return
+	}
 
 	Write-Host "`n --- $($views.exit.text) ---" -ForegroundColor $views.exit.console_color
-	add_control $form 'label' $views.exit	# exit_label
+	$NULL = add_row $form 'label' $views.exit -span 2	# exit_label
 
-	$restart_button = add_control $form 'button' $views.restart_button
+	$restart_button = add_row $form 'button' $views.restart_button -align 'Fill' -span 2
 	$restart_button.Add_Click({
 			Start-Process 'ShutDown' '/r /t 0' -WindowStyle 'Hidden'
 			Start-Process 'TaskKill' "/f /t /pid $pid" -WindowStyle 'Hidden'
