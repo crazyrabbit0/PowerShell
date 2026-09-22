@@ -1,4 +1,4 @@
-﻿
+
 ############################## GLOBALS ##############################
 
 $global:debug = 0
@@ -24,11 +24,20 @@ $actions = @(
 	},
 	@{
 		title           = '   Check Disk'
-		needs_restart   = $TRUE
+		needs_restart   = $FALSE	# /Scan is online and repairs nothing; set TRUE when switching to /F, which schedules a boot-time check
 		code            = @(
 			{ ChkDsk /Scan /Perf } #/R
 			#{ ChkDsk /F } #/R
 		)
+		success_codes   = @(0, 1, 2)	# 1 = errors found and fixed, 2 = cleanup performed or skipped for lack of /F - both are findings, not failures
+		# /Scan only queues what it finds: the system volume cannot be repaired online, so report the queue instead of silently passing
+		verdict_code    = {
+			param ([string]$log, [object]$action)
+			$state = (fsutil repair state $env:SystemDrive 2>&1 | Out-String)
+			if ($state -match 'Corruption State:\s*0x00') { return $NULL }	# clean - keep the normal success view
+			if ($state -notmatch 'Corruption State') { return $NULL }	# could not read the queue - do not invent a warning
+			return 'warning'
+		}
 		total_stages    = 3	# /Scan reports 3 stages; set to 5 when enabling /R
 		percentage_code = {
 			param ([string]$log, [object]$action)
@@ -51,6 +60,7 @@ $actions = @(
 			#{ Dism /Online /Cleanup-Image /AnalyzeComponentStore },
 			{ Dism /Online /Cleanup-Image /StartComponentCleanup } #/ResetBase
 		)
+		success_codes   = @(0, 3010)	# 3010 = ERROR_SUCCESS_REBOOT_REQUIRED, returned when a repair stages something for next boot
 		percentage_code = {
 			param ([string]$log, [object]$action)
 			try {
@@ -69,6 +79,7 @@ $actions = @(
 		code            = @(
 			{ Sfc /ScanNow }
 		)
+		unicode_output  = $TRUE	# Sfc emits UTF-16: without this the captured text is NUL-interleaved, so the regex never matches and a TextBox truncates at the first NUL
 		percentage_code = {
 			param ([string]$log, [object]$action)
 			try {
@@ -89,9 +100,14 @@ $actions = @(
 	}
 )
 
-$global:error_check_code = {
-	if (-not ($? -and $LastExitCode -in (0, $NULL))) { Throw "Operation failed, with exit code: $LastExitCode" }
-}
+# exit code is the only reliable verdict for a native command: PS 5.1 turns any stderr write into an ErrorRecord, which clears $? even on success
+$global:default_success_codes = @(0)
+
+# {0} is filled in per action with that command's acceptable exit codes
+$global:error_check_template = 'if ($NULL -ne $LastExitCode -and $LastExitCode -notin @({0})) {{ Throw "Operation failed, with exit code: $LastExitCode" }}'
+
+# Sfc and some Dism builds write UTF-16 to the pipe; decoding it as such keeps accented and non-Latin output intact on localised Windows
+$global:unicode_prelude = 'try { [Console]::OutputEncoding = [System.Text.Encoding]::Unicode } catch {}'
 
 # indent of a status row: starts the whole row under the title's text, clear of the title's icon
 $global:indent = 36
@@ -114,10 +130,24 @@ $views = @{
 		console_color = 'DarkGreen'
 	}
 	fail                = @{
-		text          = ' Aborted'
+		text          = ' Aborted'
 		font          = 'Segoe UI Semibold, 10'
 		color         = 'Crimson'
 		console_color = 'DarkRed'
+	}
+	warning             = @{	# the command succeeded, but it found something it is not allowed to fix
+		text          = '⚠ Corruption found'	# kept short: the status column is ~172px, and the fix is offered by warning_button below
+		font          = 'Segoe UI Semibold, 10'
+		glyph_size    = 14	# the warning marker carries the row, so it is drawn larger than the text around it
+		color         = 'DarkOrange'
+		console_color = 'DarkYellow'
+	}
+	warning_button      = @{	# the actionable half of the warning: the system volume can only be repaired offline
+		text   = ' Schedule Disk Repair'	# plain language: the button schedules a boot-time repair, it does not run one now
+		font   = 'Segoe UI Semibold, 10'
+		color  = 'White'
+		back   = 'DarkOrange'
+		height = 30
 	}
 	select_all_button   = @{
 		text  = '[Select all]'
@@ -222,6 +252,7 @@ function main {
 			$_.slot = add_slot $form -name $_.title -span $(if ($_.percentage_code) { 1 } else { 2 })
 			$NULL = set_slot $_.slot 'label' $views.queued
 			if ($_.percentage_code) { $_.log_button = add_log_button $form $views $_ }	# built up front, but hidden until the action starts
+			if ($_.verdict_code) { $_.note_slot = add_slot $form -name "note $($_.title)" -span 2 -full_width }	# same reason: a row added later would land at the bottom of the table, not under this action
 		}
 	}
 
@@ -353,8 +384,83 @@ function style_control {
 		}
 	}
 	
+	if ($view.glyph_size -and $type -eq 'label') { draw_leading_glyph $control $view }	# a label has one Font, so an oversized leading glyph has to be painted by hand
+	
 	if ($NULL -ne $view.back) { $control.BackColor = $view.back }
 	if ($NULL -ne $view.height) { $control.Height = $view.height }
+}
+
+# finds the first and last columns a glyph actually paints, so layout can ignore the font's side bearing
+function measure_ink {
+	param (
+		[parameter(Mandatory)] [string] $glyph,
+		[parameter(Mandatory)] [object] $font,
+		[parameter(Mandatory)] [object] $flags,
+		[parameter(Mandatory)] [int] $advance
+	)
+	
+	$height = [int]($font.Height * 2)
+	$bitmap = New-Object 'System.Drawing.Bitmap' ([int]($advance + 4)), $height
+	$graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+	$graphics.Clear([System.Drawing.Color]::White)
+	[System.Windows.Forms.TextRenderer]::DrawText($graphics, $glyph, $font, (New-Object 'System.Drawing.Rectangle' 0, 0, $bitmap.Width, $height), [System.Drawing.Color]::Black, $flags)
+	$graphics.Dispose()
+	
+	$left = $bitmap.Width; $right = -1
+	for ($x = 0; $x -lt $bitmap.Width; $x++) {
+		for ($y = 0; $y -lt $height; $y++) {
+			if ($bitmap.GetPixel($x, $y).R -lt 200) {
+				if ($x -lt $left) { $left = $x }
+				if ($x -gt $right) { $right = $x }
+				break
+			}
+		}
+	}
+	$bitmap.Dispose()
+	
+	if ($right -lt 0) { return @{ left = 0; right = $advance - 1 } }	# nothing painted: fall back to the advance width
+	@{ left = $left; right = $right }
+}
+
+# owner-draws a label as [big glyph][normal text], so the marker can outweigh the words next to it
+function draw_leading_glyph {
+	param (
+		[parameter(Mandatory)] [object] $control,
+		[parameter(Mandatory)] [object] $view
+	)
+	
+	$full = $control.Text
+	$glyph = $full.Substring(0, 1)
+	$rest = $full.Substring(1).TrimStart()
+	
+	$family = ($view.font -split ',')[0].Trim()
+	$glyph_font = New-Object 'System.Drawing.Font' $family, ([float]$view.glyph_size)
+	$text_font = $control.Font
+	
+	$flags = [System.Windows.Forms.TextFormatFlags]::NoPadding	# MeasureText adds ~6px of padding each side, which reads as a gap after the glyph
+	$advance = [System.Windows.Forms.TextRenderer]::MeasureText($glyph, $glyph_font, [System.Drawing.Size]::Empty, $flags).Width
+	$ink = measure_ink $glyph $glyph_font $flags $advance	# a symbol glyph carries a lot of built-in side bearing: 26A0 inks 17px inside a 33px advance
+	$glyph_w = $ink.right + 1	# crop the trailing side bearing only, so the glyph keeps its own left edge
+	$text_w = [System.Windows.Forms.TextRenderer]::MeasureText($rest, $text_font, [System.Drawing.Size]::Empty, $flags).Width
+	$gap = 5	# one deliberate gap, instead of the font's invisible side bearing
+	
+	$control.Text = ''
+	$control.AutoSize = $FALSE
+	$control.Width = $glyph_w + $gap + $text_w
+	$control.Height = [math]::Max($glyph_font.Height, $text_font.Height)
+	
+	$control | Add-Member -NotePropertyName 'glyph_parts' -NotePropertyValue @{
+		glyph = $glyph; rest = $rest; glyph_font = $glyph_font; text_font = $text_font; gap = $gap; glyph_w = $glyph_w; advance = $advance
+	} -Force
+	
+	$control.Add_Paint({
+			$p = $this.glyph_parts
+			$flags = [System.Windows.Forms.TextFormatFlags]::NoPadding -bor [System.Windows.Forms.TextFormatFlags]::VerticalCenter
+			$box = New-Object 'System.Drawing.Rectangle' 0, 0, $p.advance, $this.Height	# full advance: a box cropped to the ink would clip the glyph instead of moving it
+			[System.Windows.Forms.TextRenderer]::DrawText($_.Graphics, $p.glyph, $p.glyph_font, $box, $this.ForeColor, $flags)
+			$box2 = New-Object 'System.Drawing.Rectangle' ($p.glyph_w + $p.gap), 0, ($this.Width - $p.glyph_w - $p.gap), $this.Height
+			[System.Windows.Forms.TextRenderer]::DrawText($_.Graphics, $p.rest, $p.text_font, $box2, $this.ForeColor, $flags)
+		})
 }
 
 function add_row {
@@ -392,19 +498,21 @@ function add_slot {
 	param (
 		[parameter(Mandatory)] [object] $form,
 		[string] $name,
-		[int] $span = 1
+		[int] $span = 1,
+		[switch] $full_width	# ignores the status indent and stretches edge to edge, like the buttons at the bottom of the form
 	)
 	
 	$slot = New-Object 'System.Windows.Forms.Panel' -Property @{
 		AutoSize     = $TRUE
 		AutoSizeMode = 'GrowAndShrink'
-		Margin       = New-Object 'System.Windows.Forms.Padding' $global:indent, 0, 0, 0
+		Margin       = New-Object 'System.Windows.Forms.Padding' $(if ($full_width) { 0 } else { $global:indent }), 0, 0, 0
 		Anchor       = 'Left'	# no Top: let the row centre it, so it lines up with a taller neighbour
 		Name         = "slot $name"
 	}
 	
 	$form.stack.Controls.Add($slot)
 	if ($span -gt 1) { $form.stack.SetColumnSpan($slot, $span) }
+	if ($full_width) { $slot.Anchor = 'Left, Right' }	# after the add: the table resets Anchor when a control joins it
 	
 	$slot
 }
@@ -423,12 +531,21 @@ function set_slot {
 	$control = New-Object "System.Windows.Forms.$type" -Property @{ AutoSize = $($NULL -eq $view.height) }
 	style_control $control $type $view $text
 	
-	if ($type -eq 'progressbar') {
-		$widths = $slot.Parent.GetColumnWidths()
-		$first = $slot.Parent.GetPositionFromControl($slot).Column	# GetColumn returns -1 for auto-placed controls, and PowerShell reads [-1] as the LAST column
-		$span = $slot.Parent.GetColumnSpan($slot)
-		$cell = ($widths[$first..($first + $span - 1)] | Measure-Object -Sum).Sum
-		$control.Width = $cell - $slot.Margin.Left - $(if ($first + $span -ge $widths.Count) { $slot.Parent.Padding.Right } else { 0 })
+	if ($type -in 'progressbar', 'button') {	# both must span the cell they sit in, rather than autosizing to their content
+		if ($slot.Anchor -band [System.Windows.Forms.AnchorStyles]::Right) {	# Dock, not Width: the columns are still narrow here and widen when later rows are added
+			$slot.AutoSize = $FALSE
+			$slot.Height = $control.Height
+			$control.Dock = 'Fill'
+		}
+		else {
+			$widths = $slot.Parent.GetColumnWidths()
+			$first = $slot.Parent.GetPositionFromControl($slot).Column	# GetColumn returns -1 for auto-placed controls, and PowerShell reads [-1] as the LAST column
+			$span = $slot.Parent.GetColumnSpan($slot)
+			$cell = ($widths[$first..($first + $span - 1)] | Measure-Object -Sum).Sum
+			$control.Width = $cell - $slot.Margin.Left - $(if ($first + $span -ge $widths.Count) { $slot.Parent.Padding.Right } else { 0 })
+		}
+		$slot.AutoSize = $FALSE	# an autosizing panel shrinks back to the control, undoing the width just set
+		$slot.Height = $control.Height
 	}
 	
 	$slot.Controls.Add($control)
@@ -509,7 +626,7 @@ function drain_job {
 	$new = Receive-Job -Job $job 2>&1	# no -Keep: drains only what arrived since the last poll, so the log streams live
 	if (-not $new) { return '' }
 	
-	$chunk = (($new | ForEach-Object { "$_" }) -Join "`r`n") + "`r`n"
+	$chunk = ((($new | ForEach-Object { "$_" }) -Join "`r`n") + "`r`n") -replace "`0", ''	# a stray NUL truncates the log TextBox at that character, so nothing renders
 	append_log $action $chunk
 	$chunk
 }
@@ -547,8 +664,12 @@ function run_action {
 
 	$job_state = 'Completed'
 	$index = 0
+	$success_codes = $(if ($action.success_codes) { $action.success_codes } else { $global:default_success_codes }) -Join ', '
+	$error_check = [string]::Format($global:error_check_template, $success_codes)
+	$prelude = $(if ($action.unicode_output) { "${global:unicode_prelude}`n" } else { '' })
+	
 	foreach ($command in $action.code) {	# one job per command: each gets its own progress slice, and a failure stops the rest
-		$checked_code = "$command `n ${global:error_check_code}"	# check exit code after EVERY command, not just the last
+		$checked_code = "$prelude $command `n $error_check"	# check exit code after EVERY command, not just the last
 		$job = Start-Job -ScriptBlock ([ScriptBlock]::Create($checked_code)) -ArgumentList $action.code_arguments
 		$command_log = ''
 		do {
@@ -569,26 +690,53 @@ function run_action {
 	}
 	
 	$result_view = $(If ($job_state -eq 'Completed') { $views.success } else { $views.fail })
+	
+	if ($job_state -eq 'Completed' -and $action.verdict_code) {	# only a successful run has a verdict worth reading
+		$verdict = Invoke-Command -ScriptBlock $action.verdict_code -ArgumentList $action.log, $action
+		if ($verdict -and $views.$verdict) { $result_view = $views.$verdict; $action.verdict = $verdict }
+	}
+	
 	Write-Host "`n --- $($result_view.text) ---" -ForegroundColor $result_view.console_color
 	
 	$NULL = set_slot $action.slot 'label' $result_view
+	
+	if ($action.verdict -and $action.note_slot -and $views."$($action.verdict)_button") {	# fills the reserved slot: the status column is too narrow to offer the fix
+		$view = $views."$($action.verdict)_button"
+		Write-Host " --- $($view.text) ---" -ForegroundColor 'DarkYellow'
+		$button = set_slot $action.note_slot 'button' $view
+		$button.Add_Click({ schedule_offline_repair })
+	}
 
 	$form.ResetCursor()
+}
+
+# the system volume cannot be repaired while Windows runs from it: chkdsk /F only sets the dirty bit, and the real repair happens at boot
+function schedule_offline_repair {
+	$drive = $env:SystemDrive
+	$prompt = [System.Windows.Forms.MessageBox]::Show("Schedule a full repair of $drive at the next restart?`r`n`r`nThe check runs before Windows starts and can take a long time on a large disk.", 'Schedule Disk Repair', 'OKCancel', 'Warning')
+	if ($prompt -ne 'OK') { return }
+	
+	$NULL = 'Y' | ChkDsk $drive /F 2>&1	# /F cannot lock the live system volume, so it asks to schedule instead - Y answers that prompt
+	$scheduled = ((fsutil dirty query $drive 2>&1 | Out-String) -notmatch 'NOT Dirty')
+	
+	if ($scheduled) {
+		$NULL = [System.Windows.Forms.MessageBox]::Show("Repair scheduled. It will run automatically at the next restart.", 'Schedule Disk Repair', 'OK', 'Information')
+		return
+	}
+	$NULL = [System.Windows.Forms.MessageBox]::Show("Could not schedule the repair. Run this from an elevated prompt:`r`n`r`n    ChkDsk $drive /F", 'Schedule Disk Repair', 'OK', 'Error')
 }
 
 function finish {
 	param (
 		[parameter(Mandatory)] [object] $form,
 		[parameter(Mandatory)] [object] $views,
-		[string] $text = '   Process Finished'
+		[string] $text = '   Process Finished'
 	)
 
-	Write-Host "`n`n===============  $text  ===============`n"
-	$NULL = add_row $form 'label' $views.title $text -span 2	# finish_label
+	Write-Host "`n`n===============  $text  ===============`n"	# console only: the form ends with the action rows and its closing button
 
 	if (-not ($actions | Where-Object { $_.checkbox.Checked -and $_.needs_restart })) {	# Clean Disk / Optimize Disk alone need no restart
 		Write-Host "`n --- $($views.close.text) ---" -ForegroundColor $views.close.console_color
-		$NULL = add_row $form 'label' $views.close -span 2 -indent $global:indent -tight	# close_label
 		
 		$close_button = add_row $form 'button' $views.close_button -align 'Fill' -span 2
 		$close_button.Add_Click({ Start-Process 'TaskKill' "/f /t /pid $pid" -WindowStyle 'Hidden' })
@@ -596,7 +744,6 @@ function finish {
 	}
 
 	Write-Host "`n --- $($views.exit.text) ---" -ForegroundColor $views.exit.console_color
-	$NULL = add_row $form 'label' $views.exit -span 2 -indent $global:indent -tight	# exit_label - same indent as close_label, under the finish title's text
 
 	$restart_button = add_row $form 'button' $views.restart_button -align 'Fill' -span 2
 	$restart_button.Add_Click({
