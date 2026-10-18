@@ -62,7 +62,7 @@ function main {
 			@{
 				title	= 'Chrome'
 				path	= "$env:LocalAppData\Google\Chrome\User Data"
-				backup	= "$setupsPath\Chrome\.settings\User Data"
+				backup	= "$setupsPath\Google Chrome\.settings\User Data"
 				exclude	= 'BrowserMetrics Cache "Code Cache" GPUCache CacheStorage optimization_guide_prediction_model_downloads'
 			},
 			@{
