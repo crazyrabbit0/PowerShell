@@ -1,0 +1,52 @@
+name: Bug report
+description: A script does not work as expected
+labels: [bug]
+assignees: [crazyrabbit0]
+body:
+  - type: dropdown
+    id: script
+    attributes:
+      label: Script
+      options:
+        - '7z SFX Merge.ps1'
+        - 'Add to Startup.ps1'
+        - 'Adobe Fixes.ps1'
+        - 'Adobe Plugin Installer.ps1'
+        - 'Attribute Changer.ps1'
+        - 'AutoLogin.ps1'
+        - 'Black Screen.ps1'
+        - 'Chrome AutoLaunch Fix  (Allow Manifest V2 Extensions).ps1'
+        - 'Clear KMS Hosts & Keys.ps1'
+        - 'Clear Temp.ps1'
+        - 'Convert Windows 10 Home to Pro.ps1'
+        - 'Delete Locked Registry Keys  (+Lock keys).ps1'
+        - 'Ganian App (VPN).ps1'
+        - 'Grand Permissions + Ownership.ps1'
+        - 'Headphone Service.ps1'
+        - 'Hyper-V Port Reservations Fix.ps1'
+        - 'Image to Base64 to Clipboard.ps1'
+        - 'NVM Auto Install & Use.ps1'
+        - 'Reset Alt+Tab Functionality.ps1'
+        - 'Reset AnyDesk ID.ps1'
+        - 'Run .ps1 files with PowerShell.ps1'
+        - 'Run as Non-Admin.ps1'
+        - 'Set Environment Variables.ps1'
+        - 'Shortcut.ps1'
+        - 'Synchronizer.ps1'
+        - 'Windows Repair.ps1'
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Windows version and PowerShell version
+      placeholder: Windows 11 24H2, Windows PowerShell 5.1
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happens, and what did you expect?
+      description: Include the steps to reproduce and any error message.
+    validations:
+      required: true
