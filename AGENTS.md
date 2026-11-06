@@ -28,3 +28,5 @@ Most scripts share one skeleton; follow it for new ones:
 ## Commits
 
 Conventional Commits with a script scope, e.g. `feat(windows): ...`, `fix(sync): ...`, `chore: ...`. Update the README table when a script is added, removed or changes purpose. Text files are LF (`.gitattributes`).
+
+Contributor-facing rules live in `CONTRIBUTING.md` and `.github/pull_request_template.md`; keep them in step with this file.
