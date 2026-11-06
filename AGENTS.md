@@ -15,7 +15,7 @@ Most scripts share one skeleton; follow it for new ones:
 ## Rules
 
 - Target Windows PowerShell 5.1 (`powershell.exe`), not PowerShell 7: no `?:`, `??`, `&&`.
-- Five files carry a UTF-8 BOM (`Adobe Fixes`, `Black Screen`, `Clear Temp`, `Ganian App (VPN)`, `Reset AnyDesk ID`) so PS 5.1 reads their non-ASCII text; keep a BOM on any script with non-ASCII characters. `Ganian App (VPN).ps1` is in Greek.
+- Any script with non-ASCII characters needs a UTF-8 BOM, or PS 5.1 decodes it with the ANSI code page and fails to parse (CI caught this on `Windows Repair.ps1`). Six files have one: `Adobe Fixes`, `Black Screen`, `Clear Temp`, `Ganian App (VPN)` (Greek text), `Reset AnyDesk ID`, `Windows Repair`.
 - `Headphone Service Task.xml` is UTF-16 (Task Scheduler export) and marked `-text`; `.lnk` files are binary templates.
 - Personal paths go through `$env:cr` (default `C:\CR`).
 - Indentation is tabs in most files; keep each file's own style.
