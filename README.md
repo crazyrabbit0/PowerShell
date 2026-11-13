@@ -27,6 +27,7 @@ Personal Windows PowerShell scripts for Windows maintenance, fixes and file tool
 | `Set Environment Variables.ps1` | Creates short environment variables (`%cr%`, `%s2%`, `%su%`, `%ap%`) for common folders. |
 | `Run .ps1 files with PowerShell.ps1` | Sets the execution policy and fixes how `.ps1` files open, look and accept dropped files. |
 | `Add to Startup.ps1` | Adds the dropped program to, or removes it from, `HKCU\...\Run`. |
+| `Restart Cast Service.ps1` | Restarts the Wi-Fi Direct, device association and device picker services and the wireless adapter so Cast to Device finds screens again. |
 | `Headphone Service.ps1` + `Headphone Service Task.xml` | Background task that starts Audio Repeater when Bluetooth headphones connect. |
 
 ### Files and folders
